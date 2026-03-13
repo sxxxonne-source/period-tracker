@@ -1,7 +1,25 @@
+"use client"
+
+import { useEffect } from "react"
 import Link from "next/link"
 import CycleCalendar from "./components/Calendar"
 
 export default function Home() {
+
+  useEffect(() => {
+
+    const tg = (window as any).Telegram?.WebApp
+
+    if (tg) {
+      tg.ready()
+
+      const user = tg.initDataUnsafe?.user
+
+      console.log("Telegram user:", user)
+    }
+
+  }, [])
+
   return (
     <main style={{ padding: 20 }}>
       <h1>Отслеживание цикла</h1>
