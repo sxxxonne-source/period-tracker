@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Calendar from "react-calendar"
 import "react-calendar/dist/Calendar.css"
 import { supabase } from "../lib/supabase"
@@ -21,52 +21,74 @@ function addDays(d: Date, days: number) {
 export default function CycleCalendar() {
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [periods, setPeriods] = useState<Date[]>([])
+
+  useEffect(() => {
+    loadPeriods()
+  }, [])
+
+  async function loadPeriods() {
+
+    const userId =
+      localStorage.getItem("telegram_user_id") || "test_user"
+
+    const { data } = await supabase
+      .from("periods")
+      .select("start_date")
+      .eq("user_id", userId)
+
+    if (data) {
+      const dates = data.map((p: any) =>
+        startOfDay(new Date(p.start_date))
+      )
+      setPeriods(dates)
+    }
+  }
 
   async function handleDayClick(value: Date) {
 
-  const date = startOfDay(value)
-  setSelectedDate(date)
+    const date = startOfDay(value)
+    setSelectedDate(date)
 
-  const userId = localStorage.getItem("telegram_user_id") || "test_user"
+    const userId =
+      localStorage.getItem("telegram_user_id") || "test_user"
 
-  const { data, error } = await supabase
-    .from("periods")
-    .insert({
-      user_id: userId,
-      start_date: date.toISOString().split("T")[0]
-    })
+    await supabase
+      .from("periods")
+      .insert({
+        user_id: userId,
+        start_date: date.toISOString().split("T")[0]
+      })
 
-  console.log("SUPABASE RESULT:", data, error)
-}
+    loadPeriods()
+  }
 
   function tileClassName({ date }: { date: Date }) {
 
-  if (!selectedDate) return ""
+    const day = startOfDay(date)
 
-  const day = startOfDay(date)
+    for (const start of periods) {
 
-  const periodStart = startOfDay(selectedDate)
-  const periodEnd = addDays(periodStart, 4)
+      const periodEnd = addDays(start, 4)
+      const ovulation = addDays(start, 14)
+      const fertilityStart = addDays(ovulation, -2)
+      const fertilityEnd = addDays(ovulation, 2)
 
-  const ovulation = addDays(periodStart, 14)
+      if (day >= start && day <= periodEnd) {
+        return "period"
+      }
 
-  const fertilityStart = addDays(ovulation, -2)
-  const fertilityEnd = addDays(ovulation, 2)
+      if (day.getTime() === ovulation.getTime()) {
+        return "ovulation"
+      }
 
-  if (day >= periodStart && day <= periodEnd) {
-    return "period"
+      if (day >= fertilityStart && day <= fertilityEnd) {
+        return "fertility"
+      }
+    }
+
+    return ""
   }
-
-  if (day.getTime() === ovulation.getTime()) {
-    return "ovulation"
-  }
-
-  if (day >= fertilityStart && day <= fertilityEnd) {
-    return "fertility"
-  }
-
-  return ""
-}
 
   return (
     <div style={{ marginTop: 20 }}>
