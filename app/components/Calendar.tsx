@@ -30,7 +30,7 @@ export default function CycleCalendar() {
   const userId = localStorage.getItem("telegram_user_id")
 
   const { data, error } = await supabase
-    .from("periodss")
+    .from("periods")
     .insert({
       user_id: userId,
       start_date: date.toISOString().split("T")[0]
