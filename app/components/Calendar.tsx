@@ -24,18 +24,20 @@ export default function CycleCalendar() {
 
   async function handleDayClick(value: Date) {
 
-    const date = startOfDay(value)
-    setSelectedDate(date)
+  const date = startOfDay(value)
+  setSelectedDate(date)
 
-    const userId = localStorage.getItem("telegram_user_id")
+  const userId = localStorage.getItem("telegram_user_id")
 
-    await supabase
-      .from("periods")
-      .insert({
-        user_id: userId,
-        start_date: date
-      })
-  }
+  const { data, error } = await supabase
+    .from("periods")
+    .insert({
+      user_id: userId,
+      start_date: date.toISOString().split("T")[0]
+    })
+
+  console.log("SUPABASE RESULT:", data, error)
+}
 
   function tileClassName({ date }: { date: Date }) {
 
