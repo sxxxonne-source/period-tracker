@@ -27,7 +27,7 @@ export default function CycleCalendar() {
   const date = startOfDay(value)
   setSelectedDate(date)
 
-  const userId = localStorage.getItem("telegram_user_id")
+  const userId = localStorage.getItem("telegram_user_id") || "test_user"
 
   const { data, error } = await supabase
     .from("periods")
