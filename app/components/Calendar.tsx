@@ -49,16 +49,28 @@ export default function CycleCalendar() {
   async function handleDayClick(value: Date) {
 
     const date = startOfDay(value)
-    setSelectedDate(date)
+    const formatted = date.toISOString().split("T")[0]
 
     const userId =
       localStorage.getItem("telegram_user_id") || "test_user"
+
+    // проверяем есть ли уже такая дата
+    const exists = periods.some(
+      p => p.toISOString().split("T")[0] === formatted
+    )
+
+    if (exists) {
+      alert("Этот период уже добавлен")
+      return
+    }
+
+    setSelectedDate(date)
 
     await supabase
       .from("periods")
       .insert({
         user_id: userId,
-        start_date: date.toISOString().split("T")[0]
+        start_date: formatted
       })
 
     loadPeriods()
@@ -96,6 +108,7 @@ export default function CycleCalendar() {
   }
 
   function handleMouseUp() {
+
     if (pressTimer) {
       clearTimeout(pressTimer)
     }
@@ -137,6 +150,8 @@ export default function CycleCalendar() {
           <div
             onMouseDown={() => handleMouseDown(date)}
             onMouseUp={handleMouseUp}
+            onTouchStart={() => handleMouseDown(date)}
+            onTouchEnd={handleMouseUp}
             style={{ width: "100%", height: "100%" }}
           />
         )}
