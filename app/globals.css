@@ -40,3 +40,28 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+.react-calendar {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: white;
+}
+
+.react-calendar__tile {
+  border-radius: 8px;
+}
+
+.period {
+  background: #ff5a5a !important;
+  color: white !important;
+}
+
+.ovulation {
+  background: #7a5cff !important;
+  color: white !important;
+}
+
+.fertility {
+  background: #ffd84d !important;
+  color: black !important;
+}
