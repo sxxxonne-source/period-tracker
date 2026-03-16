@@ -22,6 +22,7 @@ export default function CycleCalendar() {
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [periods, setPeriods] = useState<Date[]>([])
+  const [pressTimer, setPressTimer] = useState<any>(null)
 
   useEffect(() => {
     loadPeriods()
@@ -63,6 +64,43 @@ export default function CycleCalendar() {
     loadPeriods()
   }
 
+  async function deletePeriod(date: Date) {
+
+    const confirmDelete = confirm(
+      "Удалить этот период?"
+    )
+
+    if (!confirmDelete) return
+
+    const userId =
+      localStorage.getItem("telegram_user_id") || "test_user"
+
+    const formatted = date.toISOString().split("T")[0]
+
+    await supabase
+      .from("periods")
+      .delete()
+      .eq("user_id", userId)
+      .eq("start_date", formatted)
+
+    loadPeriods()
+  }
+
+  function handleMouseDown(date: Date) {
+
+    const timer = setTimeout(() => {
+      deletePeriod(date)
+    }, 800)
+
+    setPressTimer(timer)
+  }
+
+  function handleMouseUp() {
+    if (pressTimer) {
+      clearTimeout(pressTimer)
+    }
+  }
+
   function tileClassName({ date }: { date: Date }) {
 
     const day = startOfDay(date)
@@ -95,6 +133,13 @@ export default function CycleCalendar() {
       <Calendar
         onClickDay={handleDayClick}
         tileClassName={tileClassName}
+        tileContent={({ date }) => (
+          <div
+            onMouseDown={() => handleMouseDown(date)}
+            onMouseUp={handleMouseUp}
+            style={{ width: "100%", height: "100%" }}
+          />
+        )}
       />
 
       {selectedDate && (
