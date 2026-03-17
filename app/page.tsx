@@ -1,6 +1,5 @@
 "use client"
 
-import LoadingScreen from "./components/LoadingScreen"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 
@@ -22,11 +21,16 @@ export default function Home() {
       }
     }
 
-    setTimeout(() => {
+    const hasSeenWelcome =
+      localStorage.getItem("has_seen_welcome")
+
+    if (!hasSeenWelcome) {
+      router.push("/welcome")
+    } else {
       router.push("/dashboard")
-    }, 2000)
+    }
 
   }, [])
 
-  return <LoadingScreen />
+  return <p style={{ padding: 20 }}>Загрузка...</p>
 }
