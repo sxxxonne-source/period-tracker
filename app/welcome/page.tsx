@@ -1,14 +1,27 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
+
+const avatars = ["🌸", "🌙", "💧", "💗", "🦋", "🌷"]
 
 export default function WelcomePage() {
 
   const router = useRouter()
 
+  const [name, setName] = useState("")
+  const [selectedAvatar, setSelectedAvatar] = useState("🌸")
+
   function handleContinue() {
 
+    if (!name) {
+      alert("Введите имя")
+      return
+    }
+
     localStorage.setItem("has_seen_welcome", "true")
+    localStorage.setItem("user_name", name)
+    localStorage.setItem("user_avatar", selectedAvatar)
 
     router.push("/dashboard")
   }
@@ -30,20 +43,50 @@ export default function WelcomePage() {
         Добро пожаловать!
       </h1>
 
-      <p style={{ marginBottom: 30, color: "#94a3b8" }}>
+      <p style={{ marginBottom: 20, color: "#94a3b8" }}>
         Давайте познакомимся с вашим циклом
       </p>
 
-      {/* аватар (пока заглушка) */}
-      <div
+      {/* имя */}
+      <input
+        placeholder="Введите имя"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
         style={{
-          width: 100,
-          height: 100,
-          borderRadius: "50%",
-          background: "#1e293b",
-          marginBottom: 30
+          padding: 10,
+          borderRadius: 10,
+          marginBottom: 20,
+          border: "none",
+          width: 200
         }}
       />
+
+      {/* аватар */}
+      <div style={{ marginBottom: 20 }}>
+        <p>Выберите аватар:</p>
+
+        <div style={{ marginTop: 10 }}>
+          {avatars.map((a) => (
+            <button
+              key={a}
+              onClick={() => setSelectedAvatar(a)}
+              style={{
+                fontSize: 24,
+                margin: 5,
+                padding: 10,
+                borderRadius: 10,
+                border:
+                  selectedAvatar === a
+                    ? "2px solid #3b82f6"
+                    : "none",
+                background: "#1e293b"
+              }}
+            >
+              {a}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <button
         onClick={handleContinue}
@@ -55,7 +98,7 @@ export default function WelcomePage() {
           border: "none"
         }}
       >
-        Начать
+        Продолжить
       </button>
 
     </main>
