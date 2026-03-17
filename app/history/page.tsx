@@ -1,14 +1,17 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { supabase } from "../lib/supabase"
 
 type Period = {
   start_date: string
+  duration: number
 }
 
 export default function HistoryPage() {
 
+  const router = useRouter()
   const [periods, setPeriods] = useState<Period[]>([])
 
   useEffect(() => {
@@ -22,7 +25,7 @@ export default function HistoryPage() {
 
     const { data, error } = await supabase
       .from("periods")
-      .select("start_date")
+      .select("start_date, duration")
       .eq("user_id", userId)
       .order("start_date", { ascending: false })
 
@@ -36,8 +39,34 @@ export default function HistoryPage() {
     }
   }
 
+  function formatDate(dateString: string) {
+    const date = new Date(dateString)
+
+    return date.toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    })
+  }
+
   return (
     <main style={{ padding: 20 }}>
+
+      {/* КНОПКА НАЗАД */}
+      <button
+        onClick={() => router.push("/dashboard")}
+        style={{
+          marginBottom: 20,
+          padding: "8px 12px",
+          borderRadius: 8,
+          border: "none",
+          background: "#334155",
+          color: "white"
+        }}
+      >
+        ← Назад
+      </button>
+
       <h1>История</h1>
 
       {periods.length === 0 && (
@@ -48,14 +77,20 @@ export default function HistoryPage() {
         <div
           key={index}
           style={{
-            padding: 10,
-            marginTop: 10,
-            borderRadius: 10,
+            padding: 15,
+            marginTop: 12,
+            borderRadius: 12,
             background: "#1e293b",
             color: "white"
           }}
         >
-          📅 {new Date(p.start_date).toDateString()}
+          <div style={{ fontSize: 16, fontWeight: "bold" }}>
+            📅 {formatDate(p.start_date)}
+          </div>
+
+          <div style={{ marginTop: 6, color: "#cbd5f5" }}>
+            Длительность: {p.duration || 5} дней
+          </div>
         </div>
       ))}
     </main>

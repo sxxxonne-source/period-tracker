@@ -21,8 +21,9 @@ function addDays(d: Date, days: number) {
 export default function CycleCalendar() {
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [periods, setPeriods] = useState<Date[]>([])
+  const [periods, setPeriods] = useState<any[]>([])
   const [pressTimer, setPressTimer] = useState<any>(null)
+  const [duration, setDuration] = useState(5)
 
   useEffect(() => {
     loadPeriods()
@@ -35,14 +36,15 @@ export default function CycleCalendar() {
 
     const { data } = await supabase
       .from("periods")
-      .select("start_date")
+      .select("start_date, duration")
       .eq("user_id", userId)
 
     if (data) {
-      const dates = data.map((p: any) =>
-        startOfDay(new Date(p.start_date))
-      )
-      setPeriods(dates)
+      const mapped = data.map((p: any) => ({
+        date: startOfDay(new Date(p.start_date)),
+        duration: p.duration || 5
+      }))
+      setPeriods(mapped)
     }
   }
 
@@ -54,9 +56,8 @@ export default function CycleCalendar() {
     const userId =
       localStorage.getItem("telegram_user_id") || "test_user"
 
-    // проверяем есть ли уже такая дата
     const exists = periods.some(
-      p => p.toISOString().split("T")[0] === formatted
+      p => p.date.toISOString().split("T")[0] === formatted
     )
 
     if (exists) {
@@ -70,7 +71,8 @@ export default function CycleCalendar() {
       .from("periods")
       .insert({
         user_id: userId,
-        start_date: formatted
+        start_date: formatted,
+        duration: duration
       })
 
     loadPeriods()
@@ -78,9 +80,7 @@ export default function CycleCalendar() {
 
   async function deletePeriod(date: Date) {
 
-    const confirmDelete = confirm(
-      "Удалить этот период?"
-    )
+    const confirmDelete = confirm("Удалить этот период?")
 
     if (!confirmDelete) return
 
@@ -108,19 +108,19 @@ export default function CycleCalendar() {
   }
 
   function handleMouseUp() {
-
-    if (pressTimer) {
-      clearTimeout(pressTimer)
-    }
+    if (pressTimer) clearTimeout(pressTimer)
   }
 
   function tileClassName({ date }: { date: Date }) {
 
     const day = startOfDay(date)
 
-    for (const start of periods) {
+    for (const p of periods) {
 
-      const periodEnd = addDays(start, 4)
+      const start = p.date
+      const duration = p.duration
+
+      const periodEnd = addDays(start, duration - 1)
       const ovulation = addDays(start, 14)
       const fertilityStart = addDays(ovulation, -2)
       const fertilityEnd = addDays(ovulation, 2)
@@ -143,6 +143,29 @@ export default function CycleCalendar() {
 
   return (
     <div style={{ marginTop: 20 }}>
+
+      {/* выбор длительности */}
+      <div style={{ marginBottom: 15 }}>
+        <p>Длительность:</p>
+
+        {[4,5,6,7].map(d => (
+          <button
+            key={d}
+            onClick={() => setDuration(d)}
+            style={{
+              marginRight: 8,
+              padding: "6px 10px",
+              borderRadius: 8,
+              background: duration === d ? "#3b82f6" : "#1e293b",
+              color: "white",
+              border: "none"
+            }}
+          >
+            {d} дн
+          </button>
+        ))}
+      </div>
+
       <Calendar
         onClickDay={handleDayClick}
         tileClassName={tileClassName}
