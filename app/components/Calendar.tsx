@@ -22,7 +22,6 @@ export default function CycleCalendar() {
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [periods, setPeriods] = useState<any[]>([])
-  const [pressTimer, setPressTimer] = useState<any>(null)
   const [duration, setDuration] = useState(5)
 
   useEffect(() => {
@@ -56,15 +55,31 @@ export default function CycleCalendar() {
     const userId =
       localStorage.getItem("telegram_user_id") || "test_user"
 
-    const exists = periods.some(
+    // ищем существующий период
+    const existing = periods.find(
       p => p.date.toISOString().split("T")[0] === formatted
     )
 
-    if (exists) {
-      alert("Этот период уже добавлен")
+    // 👉 если есть — удалить
+    if (existing) {
+
+      const confirmDelete = confirm(
+        "Этот период уже есть.\nУдалить его?"
+      )
+
+      if (!confirmDelete) return
+
+      await supabase
+        .from("periods")
+        .delete()
+        .eq("user_id", userId)
+        .eq("start_date", formatted)
+
+      loadPeriods()
       return
     }
 
+    // 👉 если нет — добавить
     setSelectedDate(date)
 
     await supabase
@@ -76,39 +91,6 @@ export default function CycleCalendar() {
       })
 
     loadPeriods()
-  }
-
-  async function deletePeriod(date: Date) {
-
-    const confirmDelete = confirm("Удалить этот период?")
-
-    if (!confirmDelete) return
-
-    const userId =
-      localStorage.getItem("telegram_user_id") || "test_user"
-
-    const formatted = date.toISOString().split("T")[0]
-
-    await supabase
-      .from("periods")
-      .delete()
-      .eq("user_id", userId)
-      .eq("start_date", formatted)
-
-    loadPeriods()
-  }
-
-  function handleMouseDown(date: Date) {
-
-    const timer = setTimeout(() => {
-      deletePeriod(date)
-    }, 800)
-
-    setPressTimer(timer)
-  }
-
-  function handleMouseUp() {
-    if (pressTimer) clearTimeout(pressTimer)
   }
 
   function tileClassName({ date }: { date: Date }) {
@@ -148,7 +130,7 @@ export default function CycleCalendar() {
       <div style={{ marginBottom: 15 }}>
         <p>Длительность:</p>
 
-        {[4,5,6,7].map(d => (
+        {[4, 5, 6, 7].map(d => (
           <button
             key={d}
             onClick={() => setDuration(d)}
@@ -169,15 +151,6 @@ export default function CycleCalendar() {
       <Calendar
         onClickDay={handleDayClick}
         tileClassName={tileClassName}
-        tileContent={({ date }) => (
-          <div
-            onMouseDown={() => handleMouseDown(date)}
-            onMouseUp={handleMouseUp}
-            onTouchStart={() => handleMouseDown(date)}
-            onTouchEnd={handleMouseUp}
-            style={{ width: "100%", height: "100%" }}
-          />
-        )}
       />
 
       {selectedDate && (
@@ -191,6 +164,7 @@ export default function CycleCalendar() {
           </p>
         </div>
       )}
+
     </div>
   )
 }
