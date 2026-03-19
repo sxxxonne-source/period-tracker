@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../lib/supabase"
+import BottomNav from "../components/BottomNav"
 
 export default function AddPeriod() {
 
@@ -47,7 +48,8 @@ export default function AddPeriod() {
   }
 
   return (
-    <main style={{ padding: 20 }}>
+  <>
+    <main style={{ padding: 20, paddingBottom: 80 }}>
 
       {/* НАЗАД */}
       <button
@@ -96,5 +98,8 @@ export default function AddPeriod() {
       </button>
 
     </main>
-  )
+
+    <BottomNav />
+  </>
+)
 }

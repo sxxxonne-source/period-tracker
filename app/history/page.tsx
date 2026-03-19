@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../lib/supabase"
+import BottomNav from "../components/BottomNav"
 
 type Period = {
   start_date: string
@@ -50,7 +51,8 @@ export default function HistoryPage() {
   }
 
   return (
-    <main style={{ padding: 20 }}>
+  <>
+    <main style={{ padding: 20, paddingBottom: 80 }}>
 
       {/* КНОПКА НАЗАД */}
       <button
@@ -94,5 +96,9 @@ export default function HistoryPage() {
         </div>
       ))}
     </main>
-  )
+
+    {/* 👇 ВОТ ЭТОГО НЕ ХВАТАЛО */}
+    <BottomNav />
+  </>
+)
 }
