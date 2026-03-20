@@ -65,3 +65,44 @@ body {
   background: #ffd84d !important;
   color: black !important;
 }
+.react-calendar {
+  background: #1e293b;
+  border: none;
+  border-radius: 12px;
+  color: white;
+}
+
+.react-calendar__tile {
+  color: white;
+  font-weight: 600;
+}
+
+.react-calendar__month-view__days__day--weekend {
+  color: #f87171;
+}
+
+.react-calendar__navigation button {
+  color: white;
+}
+
+.react-calendar__tile--now {
+  background: #334155 !important;
+  border-radius: 8px;
+}
+.period {
+  background: #ef4444 !important;
+  color: white !important;
+  border-radius: 8px;
+}
+
+.ovulation {
+  background: #3b82f6 !important;
+  color: white !important;
+  border-radius: 8px;
+}
+
+.fertility {
+  background: #22c55e !important;
+  color: white !important;
+  border-radius: 8px;
+}

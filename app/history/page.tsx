@@ -39,7 +39,23 @@ export default function HistoryPage() {
       setPeriods(data)
     }
   }
+async function deletePeriod(startDate: string) {
 
+  const confirmDelete = confirm("Удалить этот период?")
+
+  if (!confirmDelete) return
+
+  const userId =
+    localStorage.getItem("telegram_user_id") || "test_user"
+
+  await supabase
+    .from("periods")
+    .delete()
+    .eq("user_id", userId)
+    .eq("start_date", startDate)
+
+  loadPeriods()
+}
   function formatDate(dateString: string) {
     const date = new Date(dateString)
 
@@ -76,25 +92,43 @@ export default function HistoryPage() {
       )}
 
       {periods.map((p, index) => (
-        <div
-          key={index}
-          style={{
-            padding: 15,
-            marginTop: 12,
-            borderRadius: 12,
-            background: "#1e293b",
-            color: "white"
-          }}
-        >
-          <div style={{ fontSize: 16, fontWeight: "bold" }}>
-            📅 {formatDate(p.start_date)}
-          </div>
+  <div
+    key={index}
+    style={{
+      padding: 15,
+      marginTop: 12,
+      borderRadius: 12,
+      background: "#1e293b",
+      color: "white",
+      position: "relative" // 👈 важно
+    }}
+  >
+    {/* ❌ КНОПКА УДАЛЕНИЯ */}
+    <button
+      onClick={() => deletePeriod(p.start_date)}
+      style={{
+        position: "absolute",
+        top: 10,
+        right: 10,
+        background: "transparent",
+        border: "none",
+        color: "#f87171",
+        fontSize: 18,
+        cursor: "pointer"
+      }}
+    >
+      ✕
+    </button>
 
-          <div style={{ marginTop: 6, color: "#cbd5f5" }}>
-            Длительность: {p.duration || 5} дней
-          </div>
-        </div>
-      ))}
+    <div style={{ fontSize: 16, fontWeight: "bold" }}>
+      📅 {formatDate(p.start_date)}
+    </div>
+
+    <div style={{ marginTop: 6, color: "#cbd5f5" }}>
+      Длительность: {p.duration || 5} дней
+    </div>
+  </div>
+))}
     </main>
 
     {/* 👇 ВОТ ЭТОГО НЕ ХВАТАЛО */}
