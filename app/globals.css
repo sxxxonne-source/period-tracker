@@ -1,14 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0e1a2b; /* Глубокий темно-синий из макета */
+  --background: #0e1a2b; 
   --foreground: #F0F8FF;
   --luna-accent: #6495ED;
 }
 
 body {
-  /* Радиальный градиент для эффекта глубины */
-  background: radial-gradient(circle at 50% 0%, #1a293d 0%, #0e1a2b 100%);
+  background: radial-gradient(circle at 50% 0%, #1a293d 0%, #0e1a2b 100%) !important;
   color: var(--foreground);
   min-height: 100vh;
   margin: 0;
@@ -16,34 +15,48 @@ body {
   overflow-x: hidden;
 }
 
-/* --- СТИЛИ КАЛЕНДАРЯ REACT-CALENDAR --- */
+/* --- ГЛОБАЛЬНЫЙ СБРОС ДЛЯ КАЛЕНДАРЯ --- */
 
-.react-calendar {
+/* Это уберет белый квадрат, который виден на деплое */
+.calendar-container .react-calendar,
+.calendar-container .react-calendar__viewContainer,
+.calendar-container .react-calendar__month-view,
+.calendar-container .react-calendar__month-view > div,
+.calendar-container .react-calendar__month-view__days {
   background: transparent !important;
+  background-color: transparent !important;
   border: none !important;
+}
+
+.calendar-container .react-calendar {
   width: 100% !important;
   color: white !important;
   font-family: inherit !important;
 }
 
-/* Убираем белый фон у плиток и задаем базовый вид */
-.react-calendar__tile {
+/* Убираем фон у плиток */
+.calendar-container .react-calendar__tile {
   background: transparent !important;
+  background-color: transparent !important;
   color: white !important;
   padding: 12px 8px !important;
   border-radius: 14px !important; 
   font-size: 0.9rem !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s ease;
 }
 
-/* Навигация (Заголовок месяца и стрелки) */
-.react-calendar__navigation {
+/* Навигация */
+.calendar-container .react-calendar__navigation {
   margin-bottom: 10px !important;
   display: flex;
   height: 44px !important;
+  background: transparent !important;
 }
 
-.react-calendar__navigation button {
+.calendar-container .react-calendar__navigation button {
   color: #6495ED !important;
   min-width: 44px !important;
   background: none !important;
@@ -51,8 +64,13 @@ body {
   font-weight: 600 !important;
 }
 
+.calendar-container .react-calendar__navigation button:enabled:hover,
+.calendar-container .react-calendar__navigation button:enabled:focus {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
 /* Дни недели */
-.react-calendar__month-view__weekdays__weekday abbr {
+.calendar-container .react-calendar__month-view__weekdays__weekday abbr {
   text-decoration: none !important;
   color: rgba(255, 255, 255, 0.3) !important;
   font-size: 11px !important;
@@ -60,47 +78,50 @@ body {
   font-weight: 700 !important;
 }
 
-/* Сегодняшний день (тонкая обводка) */
-.react-calendar__tile--now {
+/* Сегодняшний день */
+.calendar-container .react-calendar__tile--now {
   background: rgba(255, 255, 255, 0.05) !important;
   border: 1px solid rgba(100, 149, 237, 0.4) !important;
 }
 
-/* Выбранный день или активная плитка */
-.react-calendar__tile--active {
+/* Активная плитка (выбранная) */
+.calendar-container .react-calendar__tile--active {
   background: #2563eb !important;
   color: white !important;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
-/* --- СПЕЦИАЛЬНЫЕ КЛАССЫ ЦИКЛА --- */
+/* --- КЛАССЫ ЦИКЛА (ПРИМЕНЯЮТСЯ ЧЕРЕЗ tileClassName) --- */
 
-/* ПЕРИОД: Яркий розовый круг */
 .period {
   background: #ff4d6d !important; 
   color: white !important;
   border-radius: 50% !important;
-  transform: scale(0.8); /* Делаем чуть меньше, чтобы был виден зазор */
+  flex: 0 0 auto !important;
+  width: 36px !important;
+  height: 36px !important;
+  margin: auto !important;
+  transform: scale(0.85);
   box-shadow: 0 0 10px rgba(255, 77, 109, 0.3);
 }
 
-/* ОВУЛЯЦИЯ: Зеленый пунктирный круг или полупрозрачный */
 .ovulation {
-  background: rgba(76, 175, 80, 0.2) !important;
+  background: rgba(76, 175, 80, 0.1) !important;
   border: 1.5px dashed #4caf50 !important;
   color: white !important;
   border-radius: 50% !important;
-  transform: scale(0.8);
+  width: 36px !important;
+  height: 36px !important;
+  margin: auto !important;
+  transform: scale(0.85);
 }
 
-/* ФЕРТИЛЬНОСТЬ: Нежное синее свечение */
 .fertility {
   background: rgba(100, 149, 237, 0.15) !important;
   border-radius: 50% !important;
 }
 
-/* Убираем стандартные эффекты при наведении для мобилок */
-.react-calendar__tile:enabled:hover,
-.react-calendar__tile:enabled:focus {
+/* Эффект при наведении */
+.calendar-container .react-calendar__tile:enabled:hover {
   background: rgba(255, 255, 255, 0.1) !important;
 }
