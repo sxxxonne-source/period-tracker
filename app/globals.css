@@ -1,16 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #1A2130;
+  --foreground: #F0F8FF;
+  --luna-accent: #6495ED;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+body {
+  background: radial-gradient(circle at center, #2A354A 0%, #1A2130 100%);
+  color: var(--foreground);
+  min-height: 100vh;
 }
+
+/* Твои кастомные классы для календаря */
 .period {
   background: #ff4d6d !important;
   color: white !important;
@@ -26,83 +28,4 @@
 .fertility {
   background: #ffd54f !important;
   border-radius: 50%;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
-.react-calendar {
-  width: 100%;
-  background: transparent;
-  border: none;
-  color: white;
-}
-
-.react-calendar__tile {
-  border-radius: 8px;
-}
-
-.period {
-  background: #ff5a5a !important;
-  color: white !important;
-}
-
-.ovulation {
-  background: #7a5cff !important;
-  color: white !important;
-}
-
-.fertility {
-  background: #ffd84d !important;
-  color: black !important;
-}
-.react-calendar {
-  background: #1e293b;
-  border: none;
-  border-radius: 12px;
-  color: white;
-}
-
-.react-calendar__tile {
-  color: white;
-  font-weight: 600;
-}
-
-.react-calendar__month-view__days__day--weekend {
-  color: #f87171;
-}
-
-.react-calendar__navigation button {
-  color: white;
-}
-
-.react-calendar__tile--now {
-  background: #334155 !important;
-  border-radius: 8px;
-}
-.period {
-  background: #ef4444 !important;
-  color: white !important;
-  border-radius: 8px;
-}
-
-.ovulation {
-  background: #3b82f6 !important;
-  color: white !important;
-  border-radius: 8px;
-}
-
-.fertility {
-  background: #22c55e !important;
-  color: white !important;
-  border-radius: 8px;
 }
