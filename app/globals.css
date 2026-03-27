@@ -7,6 +7,7 @@
 }
 
 body {
+  /* Принудительный градиент на весь фон */
   background: radial-gradient(circle at 50% 0%, #1a293d 0%, #0e1a2b 100%) !important;
   color: var(--foreground);
   min-height: 100vh;
@@ -15,14 +16,15 @@ body {
   overflow-x: hidden;
 }
 
-/* --- ГЛОБАЛЬНЫЙ СБРОС ДЛЯ КАЛЕНДАРЯ --- */
+/* --- УЛЬТИМАТИВНЫЙ СБРОС ДЛЯ КАЛЕНДАРЯ --- */
 
-/* Это уберет белый квадрат, который виден на деплое */
+/* Находим все вложенные контейнеры библиотеки и делаем их прозрачными */
 .calendar-container .react-calendar,
 .calendar-container .react-calendar__viewContainer,
 .calendar-container .react-calendar__month-view,
 .calendar-container .react-calendar__month-view > div,
-.calendar-container .react-calendar__month-view__days {
+.calendar-container .react-calendar__month-view__days,
+.calendar-container .react-calendar__navigation {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
@@ -34,30 +36,23 @@ body {
   font-family: inherit !important;
 }
 
-/* Убираем фон у плиток */
+/* Стилизация плиток (чисел) */
 .calendar-container .react-calendar__tile {
   background: transparent !important;
-  background-color: transparent !important;
   color: white !important;
-  padding: 12px 8px !important;
-  border-radius: 14px !important; 
-  font-size: 0.9rem !important;
-  display: flex;
+  padding: 10px 4px !important;
+  border-radius: 12px !important; 
+  font-size: 0.85rem !important;
+  display: flex !important;
   align-items: center;
   justify-content: center;
+  height: 44px !important; /* Важно для ровных кругов */
   transition: all 0.2s ease;
 }
 
-/* Навигация */
-.calendar-container .react-calendar__navigation {
-  margin-bottom: 10px !important;
-  display: flex;
-  height: 44px !important;
-  background: transparent !important;
-}
-
+/* Навигация (Заголовок месяца и стрелки) */
 .calendar-container .react-calendar__navigation button {
-  color: #6495ED !important;
+  color: var(--luna-accent) !important;
   min-width: 44px !important;
   background: none !important;
   font-size: 16px !important;
@@ -69,7 +64,7 @@ body {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Дни недели */
+/* Дни недели (Пн, Вт...) */
 .calendar-container .react-calendar__month-view__weekdays__weekday abbr {
   text-decoration: none !important;
   color: rgba(255, 255, 255, 0.3) !important;
@@ -84,44 +79,44 @@ body {
   border: 1px solid rgba(100, 149, 237, 0.4) !important;
 }
 
-/* Активная плитка (выбранная) */
-.calendar-container .react-calendar__tile--active {
+/* Выбранный день (активный) */
+.calendar-container .react-calendar__tile--active,
+.calendar-container .react-calendar__tile--active:enabled:hover {
   background: #2563eb !important;
   color: white !important;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
-/* --- КЛАССЫ ЦИКЛА (ПРИМЕНЯЮТСЯ ЧЕРЕЗ tileClassName) --- */
+/* --- КЛАССЫ ЦИКЛА (tileClassName) --- */
 
-.period {
+.calendar-container .period {
   background: #ff4d6d !important; 
   color: white !important;
   border-radius: 50% !important;
-  flex: 0 0 auto !important;
-  width: 36px !important;
-  height: 36px !important;
+  width: 34px !important;
+  height: 34px !important;
   margin: auto !important;
   transform: scale(0.85);
   box-shadow: 0 0 10px rgba(255, 77, 109, 0.3);
 }
 
-.ovulation {
+.calendar-container .ovulation {
   background: rgba(76, 175, 80, 0.1) !important;
   border: 1.5px dashed #4caf50 !important;
   color: white !important;
   border-radius: 50% !important;
-  width: 36px !important;
-  height: 36px !important;
+  width: 34px !important;
+  height: 34px !important;
   margin: auto !important;
   transform: scale(0.85);
 }
 
-.fertility {
+.calendar-container .fertility {
   background: rgba(100, 149, 237, 0.15) !important;
   border-radius: 50% !important;
 }
 
-/* Эффект при наведении */
-.calendar-container .react-calendar__tile:enabled:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
+/* Убираем лишние обводки при фокусе в вебе */
+button:focus {
+  outline: none !important;
 }
