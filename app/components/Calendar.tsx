@@ -5,38 +5,33 @@ import Calendar from "react-calendar"
 import "react-calendar/dist/Calendar.css"
 import { supabase } from "../lib/supabase"
 
-function startOfDay(d: Date) {
-  const x = new Date(d)
-  x.setHours(0, 0, 0, 0)
-  return x
+// Вспомогательные функции
+const startOfDay = (d: Date) => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
 }
 
-function addDays(d: Date, days: number) {
-  const x = new Date(d)
-  x.setDate(x.getDate() + days)
-  x.setHours(0, 0, 0, 0)
-  return x
+const addDays = (d: Date, days: number) => {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  x.setHours(0, 0, 0, 0);
+  return x;
 }
 
 export default function CycleCalendar() {
-
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [periods, setPeriods] = useState<any[]>([])
-  const [duration, setDuration] = useState(5)
 
   useEffect(() => {
-    loadPeriods()
+    loadPeriods();
   }, [])
 
   async function loadPeriods() {
-
-    const userId =
-      localStorage.getItem("telegram_user_id") || "test_user"
-
+    const userId = localStorage.getItem("telegram_user_id") || "test_user";
     const { data } = await supabase
       .from("periods")
       .select("start_date, duration")
-      .eq("user_id", userId)
+      .eq("user_id", userId);
 
     if (data) {
       const mapped = data.map((p: any) => ({
@@ -48,123 +43,78 @@ export default function CycleCalendar() {
   }
 
   async function handleDayClick(value: Date) {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
-    const date = startOfDay(value)
-    const formatted = date.toISOString().split("T")[0]
+    const date = startOfDay(value);
+    const formatted = date.toISOString().split("T")[0];
+    const userId = localStorage.getItem("telegram_user_id") || "test_user";
 
-    const userId =
-      localStorage.getItem("telegram_user_id") || "test_user"
+    const existing = periods.find(p => p.date.toISOString().split("T")[0] === formatted);
 
-    // ищем существующий период
-    const existing = periods.find(
-      p => p.date.toISOString().split("T")[0] === formatted
-    )
-
-    // 👉 если есть — удалить
     if (existing) {
-
-      const confirmDelete = confirm(
-        "Этот период уже есть.\nУдалить его?"
-      )
-
-      if (!confirmDelete) return
-
-      await supabase
-        .from("periods")
-        .delete()
-        .eq("user_id", userId)
-        .eq("start_date", formatted)
-
-      loadPeriods()
-      return
+      // Здесь можно вызвать красивое меню Telegram вместо обычного confirm
+      if (confirm("Удалить отметку периода?")) {
+        await supabase.from("periods").delete().eq("user_id", userId).eq("start_date", formatted);
+        loadPeriods();
+      }
+      return;
     }
 
-    // 👉 если нет — добавить
-    setSelectedDate(date)
+    // Сохраняем новый период
+    const defaultDuration = Number(localStorage.getItem("cycle_length")) || 5;
+    await supabase.from("periods").insert({
+      user_id: userId,
+      start_date: formatted,
+      duration: defaultDuration > 10 ? 5 : defaultDuration // Защита от путаницы с длиной цикла
+    });
 
-    await supabase
-      .from("periods")
-      .insert({
-        user_id: userId,
-        start_date: formatted,
-        duration: duration
-      })
-
-    loadPeriods()
+    loadPeriods();
   }
 
   function tileClassName({ date }: { date: Date }) {
-
-    const day = startOfDay(date)
+    const day = startOfDay(date);
 
     for (const p of periods) {
+      const start = p.date;
+      const duration = p.duration;
+      const periodEnd = addDays(start, duration - 1);
+      
+      // Примерная логика овуляции (14 дней до конца 28-дневного цикла)
+      const cycleLen = Number(localStorage.getItem("cycle_length")) || 28;
+      const ovulation = addDays(start, cycleLen - 14);
+      const fertilityStart = addDays(ovulation, -2);
+      const fertilityEnd = addDays(ovulation, 2);
 
-      const start = p.date
-      const duration = p.duration
-
-      const periodEnd = addDays(start, duration - 1)
-      const ovulation = addDays(start, 14)
-      const fertilityStart = addDays(ovulation, -2)
-      const fertilityEnd = addDays(ovulation, 2)
-
-      if (day >= start && day <= periodEnd) {
-        return "period"
-      }
-
-      if (day.getTime() === ovulation.getTime()) {
-        return "ovulation"
-      }
-
-      if (day >= fertilityStart && day <= fertilityEnd) {
-        return "fertility"
-      }
+      if (day >= start && day <= periodEnd) return "period";
+      if (day.getTime() === ovulation.getTime()) return "ovulation";
+      if (day >= fertilityStart && day <= fertilityEnd) return "fertility";
     }
-
-    return ""
+    return "";
   }
 
   return (
-    <div style={{ marginTop: 20 }}>
-
-      {/* выбор длительности */}
-      <div style={{ marginBottom: 15 }}>
-        <p>Длительность:</p>
-
-        {[4, 5, 6, 7].map(d => (
-          <button
-            key={d}
-            onClick={() => setDuration(d)}
-            style={{
-              marginRight: 8,
-              padding: "6px 10px",
-              borderRadius: 8,
-              background: duration === d ? "#3b82f6" : "#1e293b",
-              color: "white",
-              border: "none"
-            }}
-          >
-            {d} дн
-          </button>
-        ))}
-      </div>
-
+    <div className="w-full">
       <Calendar
         onClickDay={handleDayClick}
         tileClassName={tileClassName}
+        locale="ru-RU" // Устанавливаем русский язык
+        prev2Label={null} // Убираем переход на год назад
+        next2Label={null} // Убираем переход на год вперед
       />
-
-      {selectedDate && (
-        <div style={{ marginTop: 20 }}>
-          <p>Начало периода:</p>
-          <strong>{selectedDate.toDateString()}</strong>
-
-          <p style={{ marginTop: 10 }}>
-            Следующий период:{" "}
-            {addDays(selectedDate, 28).toDateString()}
-          </p>
+      
+      {/* Легенда под календарем в стиле Luna */}
+      <div className="flex justify-center gap-4 mt-6 text-[10px] text-gray-400 uppercase tracking-widest">
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-[#ff4d6d]"></span> Период
         </div>
-      )}
-
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-blue-400"></span> Фертильность
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-white border border-blue-400"></span> Овуляция
+        </div>
+      </div>
     </div>
   )
 }
