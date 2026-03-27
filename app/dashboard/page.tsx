@@ -29,7 +29,6 @@ export default function Dashboard() {
     if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred(type);
   };
 
-  // Функция быстрого добавления в стиле Flo
   const handleQuickAdd = async () => {
     const tg = (window as any).Telegram?.WebApp;
     const today = new Date().toISOString().split('T')[0];
@@ -55,13 +54,11 @@ export default function Dashboard() {
             duration: duration || 5
           });
           
-          // Обновляем данные без перезагрузки всей страницы
           calculateCycle();
           window.location.reload(); 
         }
       });
     } else {
-      // Фолбек для браузера, если TG SDK не доступен
       if (confirm("Месячные начались сегодня?")) {
         await supabase.from("periods").insert({ user_id: userId, start_date: today, duration: 5 });
         window.location.reload();
@@ -101,16 +98,17 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0e1a2b] text-white font-sans overflow-x-hidden pb-24">
+    <main className="h-screen bg-[#0e1a2b] text-white font-sans overflow-hidden flex flex-col pb-6">
       
-      <div className="w-full px-6 pt-8 flex items-center justify-between mb-8">
+      {/* HEADER: Компактнее, Привет! вместо Привет, */}
+      <div className="w-full px-6 pt-6 flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-blue-900/30 border border-blue-400/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(100,149,237,0.2)]">
+          <div className="w-11 h-11 rounded-full bg-blue-900/30 border border-blue-400/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(100,149,237,0.2)]">
             {avatar}
           </div>
           <div>
-            <p className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">Привет,</p>
-            <h2 className="text-xl font-bold leading-tight">{name}</h2>
+            <h2 className="text-xl font-bold leading-tight">Привет!</h2>
+            <p className="text-xs text-blue-400 font-medium uppercase tracking-wider">{name}</p>
           </div>
         </div>
         
@@ -122,39 +120,43 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div className="px-6 max-w-[402px] mx-auto space-y-6">
+      <div className="px-6 flex-1 flex flex-col justify-between max-w-[402px] mx-auto w-full">
         
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-[#1e293b]/50 p-4 rounded-3xl border border-white/5 backdrop-blur-sm shadow-inner text-center">
-            <p className="text-[10px] text-gray-400 uppercase mb-1">Менструация</p>
-            <p className="text-lg font-bold text-blue-400">
+        {/* STATS: Чуть меньше отступы */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-[#1e293b]/50 p-3 rounded-2xl border border-white/5 backdrop-blur-sm shadow-inner text-center">
+            <p className="text-[9px] text-gray-400 uppercase mb-1">Менструация</p>
+            <p className="text-md font-bold text-blue-400">
               {nextPeriodDays !== null ? (nextPeriodDays <= 0 ? "Сегодня" : `${nextPeriodDays} дн.`) : '...'}
             </p>
           </div>
-          <div className="bg-[#1e293b]/50 p-4 rounded-3xl border border-white/5 backdrop-blur-sm shadow-inner text-center">
-            <p className="text-[10px] text-gray-400 uppercase mb-1">Овуляция</p>
-            <p className="text-lg font-bold text-pink-400">
+          <div className="bg-[#1e293b]/50 p-3 rounded-2xl border border-white/5 backdrop-blur-sm shadow-inner text-center">
+            <p className="text-[9px] text-gray-400 uppercase mb-1">Овуляция</p>
+            <p className="text-md font-bold text-pink-400">
               {ovulationDays !== null ? (ovulationDays <= 0 ? "Сегодня" : `${ovulationDays} дн.`) : '...'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center justify-between px-2">
-          <h3 className="text-lg font-semibold tracking-tight">Отслеживание цикла</h3>
-          <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full border border-blue-500/30 font-mono">
-            {new Date().toLocaleString('ru', { month: 'long', year: 'numeric' }).toUpperCase()}
-          </span>
+        {/* CALENDAR SECTION: Уменьшены зазоры */}
+        <div className="flex-1 flex flex-col justify-center my-3">
+          <div className="flex items-center justify-between px-2 mb-2">
+            <h3 className="text-sm font-semibold tracking-tight">Отслеживание цикла</h3>
+            <span className="text-[9px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30 font-mono">
+              {new Date().toLocaleString('ru', { month: 'long', year: 'numeric' }).toUpperCase()}
+            </span>
+          </div>
+
+          <div className="bg-[#1e293b]/40 rounded-[24px] p-1 border border-white/5 shadow-2xl backdrop-blur-md overflow-hidden">
+            <CycleCalendar />
+          </div>
         </div>
 
-        <div className="bg-[#1e293b]/40 rounded-[32px] p-2 border border-white/5 shadow-2xl backdrop-blur-md">
-          <CycleCalendar />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 pt-4">
-          {/* ГЛАВНАЯ КНОПКА ТЕПЕРЬ QUICK ADD */}
+        {/* BUTTONS: Более компактные */}
+        <div className="grid grid-cols-2 gap-3 mb-2">
           <button 
             onClick={handleQuickAdd}
-            className="w-full py-4 rounded-2xl bg-blue-600 font-bold text-sm shadow-[0_8px_15px_rgba(37,99,235,0.3)] active:scale-95 transition-all text-white"
+            className="w-full py-3.5 rounded-xl bg-blue-600 font-bold text-xs shadow-lg active:scale-95 transition-all text-white"
           >
             Отметить начало
           </button>
@@ -162,7 +164,7 @@ export default function Dashboard() {
           <Link href="/history" className="w-full">
             <button 
               onClick={() => triggerHaptic()}
-              className="w-full py-4 rounded-2xl bg-[#1e293b] border border-white/10 font-bold text-sm hover:bg-[#2a3a52] active:scale-95 transition-all text-white"
+              className="w-full py-3.5 rounded-xl bg-[#1e293b] border border-white/10 font-bold text-xs hover:bg-[#2a3a52] active:scale-95 transition-all text-white"
             >
               История
             </button>
