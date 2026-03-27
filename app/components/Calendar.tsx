@@ -5,7 +5,7 @@ import 'react-calendar/dist/Calendar.css'
 import { useState, useEffect } from "react"
 import { supabase } from "../lib/supabase"
 
-// Определяем типы для Calendar, чтобы VS Code не ругался
+// Определяем типы для Calendar
 type ValuePiece = Date | null;
 type Value = ValuePiece | [ValuePiece, ValuePiece];
 
@@ -16,16 +16,22 @@ type Period = {
 
 export default function CycleCalendar() {
   const [periods, setPeriods] = useState<Period[]>([])
-  
-  // Инициализируем состояние с правильным типом
   const [value, setValue] = useState<Value>(new Date());
+  const [cycleLength, setCycleLength] = useState(28);
 
   useEffect(() => {
-    fetchPeriods()
+    // Выполняется только на клиенте
+    if (typeof window !== "undefined") {
+      const savedCycle = localStorage.getItem("cycle_length");
+      if (savedCycle) setCycleLength(Number(savedCycle));
+      fetchPeriods();
+    }
   }, [])
 
   async function fetchPeriods() {
-    const userId = localStorage.getItem("telegram_user_id") || "test_user"
+    // Безопасно берем ID из localStorage
+    const userId = (typeof window !== "undefined" && localStorage.getItem("telegram_user_id")) || "test_user"
+    
     const { data } = await supabase
       .from("periods")
       .select("start_date, duration")
@@ -34,7 +40,6 @@ export default function CycleCalendar() {
     if (data) setPeriods(data)
   }
 
-  // Обработчик изменения даты
   const handleDateChange = (newValue: Value) => {
     setValue(newValue);
   };
@@ -43,7 +48,9 @@ export default function CycleCalendar() {
     if (view !== 'month') return null
 
     const dateStr = date.toISOString().split('T')[0]
-    const cycleLength = Number(localStorage.getItem("cycle_length")) || 28
+    
+    // Используем cycleLength из состояния, чтобы не дергать localStorage при каждом рендере плитки
+    const currentCycleLength = cycleLength;
 
     const isPeriod = periods.some(p => {
       const start = new Date(p.start_date)
@@ -51,12 +58,14 @@ export default function CycleCalendar() {
       end.setDate(start.getDate() + (p.duration - 1))
       return date >= start && date <= end
     })
+    
     if (isPeriod) return 'period'
 
     if (periods.length > 0) {
+      // Берем самый свежий период (обычно первый в массиве, если сортировка верная)
       const lastPeriod = new Date(periods[0].start_date)
       const nextPeriod = new Date(lastPeriod)
-      nextPeriod.setDate(lastPeriod.getDate() + cycleLength)
+      nextPeriod.setDate(lastPeriod.getDate() + currentCycleLength)
 
       const ovulationDate = new Date(nextPeriod)
       ovulationDate.setDate(ovulationDate.getDate() - 14)

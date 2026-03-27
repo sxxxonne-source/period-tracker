@@ -15,21 +15,28 @@ export default function Dashboard() {
   const [ovulationDays, setOvulationDays] = useState<number | null>(null)
 
   useEffect(() => {
-    const savedLang = localStorage.getItem("lang") || "ru"
-    setLang(savedLang as "ru" | "en")
-    
-    setName(localStorage.getItem("user_name") || "Гость")
-    setAvatar(localStorage.getItem("user_avatar_emoji") || "🌸")
+    // Безопасное чтение только после монтирования в браузере
+    if (typeof window !== "undefined") {
+      const savedLang = localStorage.getItem("lang") || "ru"
+      setLang(savedLang as "ru" | "en")
+      
+      setName(localStorage.getItem("user_name") || "Гость")
+      setAvatar(localStorage.getItem("user_avatar_emoji") || "🌸")
 
-    calculateCycle()
+      calculateCycle()
+    }
   }, [])
 
   const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
-    const tg = (window as any).Telegram?.WebApp;
-    if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred(type);
+    if (typeof window !== "undefined") {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred(type);
+    }
   };
 
   const handleQuickAdd = async () => {
+    if (typeof window === "undefined") return;
+    
     const tg = (window as any).Telegram?.WebApp;
     const today = new Date().toISOString().split('T')[0];
     const userId = localStorage.getItem("telegram_user_id") || "test_user";
@@ -46,7 +53,8 @@ export default function Dashboard() {
       }, async (buttonId: string) => {
         if (buttonId === 'yes') {
           triggerHaptic('heavy');
-          const duration = Number(localStorage.getItem("cycle_length")) > 10 ? 5 : Number(localStorage.getItem("cycle_length"));
+          const savedCycleLen = localStorage.getItem("cycle_length");
+          const duration = Number(savedCycleLen) > 10 ? 5 : Number(savedCycleLen);
           
           await supabase.from("periods").insert({
             user_id: userId,
@@ -67,6 +75,8 @@ export default function Dashboard() {
   };
 
   async function calculateCycle() {
+    if (typeof window === "undefined") return;
+
     const userId = localStorage.getItem("telegram_user_id") || "test_user"
     const { data } = await supabase
       .from("periods")
@@ -75,6 +85,7 @@ export default function Dashboard() {
       .order("start_date", { ascending: false })
       .limit(1)
 
+    // Проверка на наличие данных в БД или в localStorage
     let lastDateStr = data?.[0]?.start_date || localStorage.getItem("last_period")
     if (!lastDateStr) return
 
@@ -100,7 +111,6 @@ export default function Dashboard() {
   return (
     <main className="h-screen bg-[#0e1a2b] text-white font-sans overflow-hidden flex flex-col pb-6">
       
-      {/* HEADER: Компактнее, Привет! вместо Привет, */}
       <div className="w-full px-6 pt-6 flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-full bg-blue-900/30 border border-blue-400/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(100,149,237,0.2)]">
@@ -122,7 +132,6 @@ export default function Dashboard() {
 
       <div className="px-6 flex-1 flex flex-col justify-between max-w-[402px] mx-auto w-full">
         
-        {/* STATS: Чуть меньше отступы */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#1e293b]/50 p-3 rounded-2xl border border-white/5 backdrop-blur-sm shadow-inner text-center">
             <p className="text-[9px] text-gray-400 uppercase mb-1">Менструация</p>
@@ -138,7 +147,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* CALENDAR SECTION: Уменьшены зазоры */}
         <div className="flex-1 flex flex-col justify-center my-3">
           <div className="flex items-center justify-between px-2 mb-2">
             <h3 className="text-sm font-semibold tracking-tight">Отслеживание цикла</h3>
@@ -152,7 +160,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* BUTTONS: Более компактные */}
         <div className="grid grid-cols-2 gap-3 mb-2">
           <button 
             onClick={handleQuickAdd}
