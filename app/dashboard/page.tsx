@@ -15,7 +15,6 @@ export default function Dashboard() {
   const [ovulationDays, setOvulationDays] = useState<number | null>(null)
 
   useEffect(() => {
-    // Подтягиваем данные из localStorage
     const savedLang = localStorage.getItem("lang") || "ru"
     setLang(savedLang as "ru" | "en")
     
@@ -25,10 +24,49 @@ export default function Dashboard() {
     calculateCycle()
   }, [])
 
-  // Функция вибрации для кнопок
-  const triggerHaptic = (type: 'light' | 'medium' = 'light') => {
+  const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
     const tg = (window as any).Telegram?.WebApp;
     if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred(type);
+  };
+
+  // Функция быстрого добавления в стиле Flo
+  const handleQuickAdd = async () => {
+    const tg = (window as any).Telegram?.WebApp;
+    const today = new Date().toISOString().split('T')[0];
+    const userId = localStorage.getItem("telegram_user_id") || "test_user";
+
+    if (tg?.showPopup) {
+      triggerHaptic('medium');
+      tg.showPopup({
+        title: 'Luna Инфо',
+        message: 'Месячные начались сегодня?',
+        buttons: [
+          { id: 'yes', type: 'default', text: 'Да, отметить' },
+          { id: 'cancel', type: 'destructive', text: 'Отмена' }
+        ]
+      }, async (buttonId: string) => {
+        if (buttonId === 'yes') {
+          triggerHaptic('heavy');
+          const duration = Number(localStorage.getItem("cycle_length")) > 10 ? 5 : Number(localStorage.getItem("cycle_length"));
+          
+          await supabase.from("periods").insert({
+            user_id: userId,
+            start_date: today,
+            duration: duration || 5
+          });
+          
+          // Обновляем данные без перезагрузки всей страницы
+          calculateCycle();
+          window.location.reload(); 
+        }
+      });
+    } else {
+      // Фолбек для браузера, если TG SDK не доступен
+      if (confirm("Месячные начались сегодня?")) {
+        await supabase.from("periods").insert({ user_id: userId, start_date: today, duration: 5 });
+        window.location.reload();
+      }
+    }
   };
 
   async function calculateCycle() {
@@ -40,7 +78,6 @@ export default function Dashboard() {
       .order("start_date", { ascending: false })
       .limit(1)
 
-    // Если данных в БД еще нет, берем дату из Welcome (localStorage)
     let lastDateStr = data?.[0]?.start_date || localStorage.getItem("last_period")
     if (!lastDateStr) return
 
@@ -66,7 +103,6 @@ export default function Dashboard() {
   return (
     <main className="min-h-screen bg-[#0e1a2b] text-white font-sans overflow-x-hidden pb-24">
       
-      {/* ВЕРХНЯЯ ПАНЕЛЬ (Header) */}
       <div className="w-full px-6 pt-8 flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-blue-900/30 border border-blue-400/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(100,149,237,0.2)]">
@@ -88,48 +124,45 @@ export default function Dashboard() {
 
       <div className="px-6 max-w-[402px] mx-auto space-y-6">
         
-        {/* КАРТОЧКИ ПРОГНОЗА (Stats) */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-[#1e293b]/50 p-4 rounded-3xl border border-white/5 backdrop-blur-sm shadow-inner">
+          <div className="bg-[#1e293b]/50 p-4 rounded-3xl border border-white/5 backdrop-blur-sm shadow-inner text-center">
             <p className="text-[10px] text-gray-400 uppercase mb-1">Менструация</p>
             <p className="text-lg font-bold text-blue-400">
-              {nextPeriodDays !== null ? `${nextPeriodDays} дн.` : '...'}
+              {nextPeriodDays !== null ? (nextPeriodDays <= 0 ? "Сегодня" : `${nextPeriodDays} дн.`) : '...'}
             </p>
           </div>
-          <div className="bg-[#1e293b]/50 p-4 rounded-3xl border border-white/5 backdrop-blur-sm shadow-inner">
+          <div className="bg-[#1e293b]/50 p-4 rounded-3xl border border-white/5 backdrop-blur-sm shadow-inner text-center">
             <p className="text-[10px] text-gray-400 uppercase mb-1">Овуляция</p>
             <p className="text-lg font-bold text-pink-400">
-              {ovulationDays !== null ? `${ovulationDays} дн.` : '...'}
+              {ovulationDays !== null ? (ovulationDays <= 0 ? "Сегодня" : `${ovulationDays} дн.`) : '...'}
             </p>
           </div>
         </div>
 
-        {/* ЗАГОЛОВОК КАЛЕНДАРЯ */}
         <div className="flex items-center justify-between px-2">
           <h3 className="text-lg font-semibold tracking-tight">Отслеживание цикла</h3>
-          <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full border border-blue-500/30">МАРТ 2026</span>
+          <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full border border-blue-500/30 font-mono">
+            {new Date().toLocaleString('ru', { month: 'long', year: 'numeric' }).toUpperCase()}
+          </span>
         </div>
 
-        {/* ОСНОВНОЙ КАЛЕНДАРЬ */}
         <div className="bg-[#1e293b]/40 rounded-[32px] p-2 border border-white/5 shadow-2xl backdrop-blur-md">
           <CycleCalendar />
         </div>
 
-        {/* КНОПКИ ДЕЙСТВИЯ (Action Buttons) */}
         <div className="grid grid-cols-2 gap-4 pt-4">
-          <Link href="/add-period" className="w-full">
-            <button 
-              onClick={() => triggerHaptic('medium')}
-              className="w-full py-4 rounded-2xl bg-blue-600 font-bold text-sm shadow-[0_8px_15px_rgba(37,99,235,0.3)] active:scale-95 transition-all"
-            >
-              Добавить период
-            </button>
-          </Link>
+          {/* ГЛАВНАЯ КНОПКА ТЕПЕРЬ QUICK ADD */}
+          <button 
+            onClick={handleQuickAdd}
+            className="w-full py-4 rounded-2xl bg-blue-600 font-bold text-sm shadow-[0_8px_15px_rgba(37,99,235,0.3)] active:scale-95 transition-all text-white"
+          >
+            Отметить начало
+          </button>
 
           <Link href="/history" className="w-full">
             <button 
               onClick={() => triggerHaptic()}
-              className="w-full py-4 rounded-2xl bg-[#1e293b] border border-white/10 font-bold text-sm hover:bg-[#2a3a52] active:scale-95 transition-all"
+              className="w-full py-4 rounded-2xl bg-[#1e293b] border border-white/10 font-bold text-sm hover:bg-[#2a3a52] active:scale-95 transition-all text-white"
             >
               История
             </button>
