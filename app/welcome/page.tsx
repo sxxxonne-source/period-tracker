@@ -72,8 +72,8 @@ export default function WelcomePage() {
         
         {/* ВЕРХНЯЯ ЧАСТЬ (Приветствие и Swiper) */}
         <div className="w-full flex flex-col items-center pt-8">
-          <h1 className="text-3xl font-bold mb-1">Привет!</h1>
-          <p className="text-gray-400 mb-8 text-sm">Давайте настроим ваш профиль</p>
+          <h1 className="text-3xl font-bold mb-1">Добро Пожаловать!</h1>
+          <p className="text-gray-400 mb-8 text-sm">Давайте познакомимся с вашим циклом</p>
 
           {/* КАРУСЕЛЬ ЭМОДЗИ С ГРАДИЕНТОМ И ЦЕНТРИРОВАНИЕМ */}
           {/* Исправление: Обернули Swiper в div с фиксированной высотой и overflow-hidden */}
@@ -128,7 +128,7 @@ export default function WelcomePage() {
 
           {/* ПРОДОЛЖИТЕЛЬНОСТЬ ЦИКЛА */}
           <div className="bg-[#1e293b]/50 p-5 rounded-[28px] border border-white/5 shadow-inner">
-            <p className="text-[11px] text-gray-400 uppercase tracking-widest mb-3 text-center font-bold">Длина цикла</p>
+            <p className="text-[11px] text-gray-400 uppercase tracking-widest mb-3 text-center font-bold">Продолжительность цикла</p>
             <div className="flex items-center justify-between bg-[#0e1a2b] rounded-xl p-1 border border-white/5 shadow-lg">
               <button 
                 onClick={() => { setCycleLength(Math.max(21, cycleLength - 1)); triggerHaptic('rigid'); }} 
@@ -160,7 +160,7 @@ export default function WelcomePage() {
             onClick={handleContinue}
             className="w-full py-5 rounded-[24px] bg-gradient-to-r from-blue-600 to-blue-400 text-white font-bold text-lg shadow-[0_10px_20px_rgba(59,130,246,0.3)] active:scale-95 transition-all"
           >
-            Начать путешествие
+            Продолжить
           </button>
         </div>
 
