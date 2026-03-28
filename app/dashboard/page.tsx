@@ -3,7 +3,6 @@
 import Link from "next/link"
 import CycleCalendar from "../components/Calendar"
 import { useEffect, useState } from "react"
-import BottomNav from "../components/BottomNav"
 import { t } from "../lib/translations"
 import { supabase } from "../lib/supabase"
 
@@ -180,7 +179,6 @@ export default function Dashboard() {
 
       </div>
 
-      <BottomNav />
     </main>
   )
 }

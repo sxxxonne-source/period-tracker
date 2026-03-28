@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../lib/supabase"
-import BottomNav from "../components/BottomNav"
 
 export default function AddPeriod() {
 
@@ -99,7 +98,6 @@ export default function AddPeriod() {
 
     </main>
 
-    <BottomNav />
   </>
 )
 }

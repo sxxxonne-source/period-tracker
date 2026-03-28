@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import BottomNav from "../components/BottomNav"
 
 const AVAILABLE_AVATARS = ["🌸", "🌙", "💧", "💗", "🦋", "🌷", "⭐", "✨"]
 
@@ -125,7 +124,6 @@ export default function SettingsPage() {
 
       </div>
 
-      <BottomNav />
     </main>
   )
 }
