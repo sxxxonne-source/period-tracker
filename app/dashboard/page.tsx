@@ -10,7 +10,6 @@ export default function Dashboard() {
   const [avatar, setAvatar] = useState("🌸")
   const [isPremium, setIsPremium] = useState(false)
   const [nextPeriodDays, setNextPeriodDays] = useState<number | null>(null)
-  const [daysUntilEnd, setDaysUntilEnd] = useState<number | null>(null)
   const [ovulationDays, setOvulationDays] = useState<number | null>(null)
   
   const [isActionModalOpen, setIsActionModalOpen] = useState(false)
@@ -41,6 +40,52 @@ export default function Dashboard() {
     tg?.showAlert?.(`Тестовый режим: подписка ${newStatus ? 'АКТИВИРОВАНА' : 'ДЕАКТИВИРОВАНА'}`);
   };
 
+  // Вспомогательная функция для записи в базу
+  const savePeriodToDb = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const userId = localStorage.getItem("telegram_user_id") || "test_user";
+    const savedDuration = Number(localStorage.getItem("period_duration")) || 5;
+
+    const { error } = await supabase.from("periods").insert({ 
+      user_id: userId, 
+      start_date: today, 
+      duration: savedDuration 
+    });
+
+    if (!error) {
+      triggerHaptic('medium');
+      window.location.reload(); 
+    } else {
+      console.error("Ошибка сохранения:", error);
+    }
+  };
+
+  const handleQuickAdd = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    triggerHaptic('medium');
+
+    // Если мы в Telegram и метод showPopup доступен
+    if (tg && tg.showPopup) {
+      tg.showPopup({
+        title: 'Luna Инфо',
+        message: `Отметить начало менструации сегодня?`,
+        buttons: [
+          { id: 'yes', type: 'default', text: 'Да, отметить' },
+          { id: 'cancel', type: 'destructive', text: 'Отмена' }
+        ]
+      }, (buttonId: string) => {
+        if (buttonId === 'yes') {
+          savePeriodToDb();
+        }
+      });
+    } else {
+      // Запасной вариант (для браузера или если SDK залагал)
+      if (window.confirm("Отметить начало менструации сегодня?")) {
+        savePeriodToDb();
+      }
+    }
+  };
+
   const handleAddEvent = async (type: string, value: string) => {
     if (!isPremium) {
       triggerHaptic('medium');
@@ -55,16 +100,13 @@ export default function Dashboard() {
     const userId = localStorage.getItem("telegram_user_id") || "test_user";
     const today = new Date().toISOString().split('T')[0];
     
-    const supabaseRequest = supabase.from("events").insert({
+    const { error } = await supabase.from("events").insert({
       user_id: userId,
       date: today,
       type: type,
       value: value
     });
 
-    await new Promise(resolve => setTimeout(resolve, 250));
-
-    const { error } = await supabaseRequest;
     if (!error) {
       setIsActionModalOpen(false);
       setIsClosing(false);
@@ -72,30 +114,6 @@ export default function Dashboard() {
     } else {
       setIsClosing(false);
       console.error(error);
-    }
-  };
-
-  const handleQuickAdd = async () => {
-    const tg = (window as any).Telegram?.WebApp;
-    const today = new Date().toISOString().split('T')[0];
-    const userId = localStorage.getItem("telegram_user_id") || "test_user";
-    const savedDuration = Number(localStorage.getItem("period_duration")) || 5;
-
-    if (tg?.showPopup) {
-      triggerHaptic('medium');
-      tg.showPopup({
-        title: 'Luna Инфо',
-        message: `Отметить начало сегодня?`,
-        buttons: [
-          { id: 'yes', type: 'default', text: 'Да' },
-          { id: 'cancel', type: 'destructive', text: 'Отмена' }
-        ]
-      }, async (buttonId: string) => {
-        if (buttonId === 'yes') {
-          await supabase.from("periods").insert({ user_id: userId, start_date: today, duration: savedDuration });
-          window.location.reload(); 
-        }
-      });
     }
   };
 
@@ -130,7 +148,6 @@ export default function Dashboard() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              {/* "Привет!" - теперь маленький и голубой */}
               <span className="text-xs text-blue-400 font-medium tracking-wide">Привет!</span>
               <div 
                 onClick={togglePremiumTest}
@@ -140,7 +157,6 @@ export default function Dashboard() {
                 {isPremium ? "Премиум" : "Базовая"}
               </div>
             </div>
-            {/* Имя пользователя - теперь крупное и белое */}
             <h2 className="text-xl font-bold text-white leading-tight">{name}</h2>
           </div>
         </div>
@@ -176,7 +192,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-3 mt-4 mb-2">
           <button 
             onClick={handleQuickAdd}
-            className="flex-1 py-3.5 rounded-xl bg-blue-600 font-bold text-[10px] uppercase tracking-wide active:scale-95 transition-all"
+            className="flex-1 py-3.5 rounded-xl bg-blue-600 font-bold text-[10px] uppercase tracking-wide active:scale-95 transition-all shadow-[0_4px_15px_rgba(37,99,235,0.4)]"
           >
             Отметить начало
           </button>
@@ -203,13 +219,12 @@ export default function Dashboard() {
       {/* МОДАЛКА */}
       {isActionModalOpen && (
         <div 
-          className={`fixed inset-0 z-[100] flex items-end justify-center px-6 pb-24 bg-black/20 backdrop-blur-[2px] transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
+          className={`fixed inset-0 z-[100] flex items-end justify-center px-6 pb-24 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
           onClick={() => setIsActionModalOpen(false)}
         >
           <div 
-            className={`w-full max-w-[320px] bg-[#1e293b]/80 backdrop-blur-2xl rounded-[30px] p-6 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transform transition-all duration-300 
-              ${isClosing ? 'translate-y-[100px] opacity-0 scale-90' : 'translate-y-0 opacity-100 scale-100'} 
-              animate-in slide-in-from-bottom-10 fade-in zoom-in-95`}
+            className={`w-full max-w-[320px] bg-[#1e293b] rounded-[30px] p-6 border border-white/10 shadow-2xl transform transition-all duration-300 
+              ${isClosing ? 'translate-y-[100px] opacity-0' : 'translate-y-0 opacity-100'} `}
             onClick={e => e.stopPropagation()}
           >
             <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mb-5" />

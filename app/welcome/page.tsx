@@ -11,35 +11,35 @@ import 'swiper/css'
 // Список доступных эмодзи
 const AVAILABLE_EMOJIS = ["🌸", "🌙", "💧", "💗", "🦋", "🌷", "⭐", "✨"]
 
-// Кастомный хук для вибрации
-const useHaptics = () => {
-  const trigger = (type: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'light') => {
-    if (typeof window !== "undefined") {
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred(type);
-    }
-  };
-  return trigger;
-};
-
 export default function WelcomePage() {
   const router = useRouter()
   const swiperRef = useRef<any>(null); 
-  const triggerHaptic = useHaptics();
   
   const [name, setName] = useState("")
   const [selectedEmoji, setSelectedEmoji] = useState(AVAILABLE_EMOJIS[0]) 
   const [cycleLength, setCycleLength] = useState(28)
-  
-  // Дата - сегодня (для старта)
   const [lastPeriod, setLastPeriod] = useState(new Date().toISOString().split('T')[0]);
+
+  // Функция вибрации вынесена внутрь для прямого доступа к tg
+  const triggerHaptic = (type: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'light') => {
+    if (typeof window !== "undefined") {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg && tg.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred(type);
+      }
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const tg = (window as any).Telegram?.WebApp
       if (tg) {
-        tg.expand();
         tg.ready();
+        tg.expand();
+        // Принудительно сообщаем TG, что мы работаем с Haptics
+        if (tg.HapticFeedback) {
+           console.log("Haptics ready");
+        }
         const user = tg.initDataUnsafe?.user
         if (user) { setName(user.first_name || ""); }
       }
@@ -49,10 +49,11 @@ export default function WelcomePage() {
   function handleContinue() {
     if (!name.trim()) {
       triggerHaptic('heavy');
-      return alert("Введите имя");
+      const tg = (window as any).Telegram?.WebApp;
+      tg?.showAlert?.("Пожалуйста, введите ваше имя");
+      return;
     }
     
-    // Сохраняем настройки
     localStorage.setItem("user_name", name)
     localStorage.setItem("user_avatar_emoji", selectedEmoji)
     localStorage.setItem("cycle_length", cycleLength.toString())
@@ -64,19 +65,15 @@ export default function WelcomePage() {
   }
 
   return (
-    // ГЛАВНЫЙ КОНТЕЙНЕР: h-screen, flex-col, overflow-hidden
-    <main className="h-screen w-full flex items-center justify-center bg-[#0e1a2b] text-white overflow-hidden p-6">
+    <main className="h-screen w-full flex items-center justify-center bg-[#0e1a2b] text-white overflow-hidden p-6 touch-none">
       
-      {/* Контейнер-телефон (как в Figma), flex-col, space-between */}
       <div className="w-full max-w-[402px] h-full flex flex-col items-center justify-between">
         
-        {/* ВЕРХНЯЯ ЧАСТЬ (Приветствие и Swiper) */}
+        {/* ВЕРХНЯЯ ЧАСТЬ */}
         <div className="w-full flex flex-col items-center pt-8">
           <h1 className="text-3xl font-bold mb-1">Добро Пожаловать!</h1>
-          <p className="text-gray-400 mb-8 text-sm">Давайте познакомимся с вашим циклом</p>
+          <p className="text-gray-400 mb-8 text-sm text-center">Давайте познакомимся с вашим циклом</p>
 
-          {/* КАРУСЕЛЬ ЭМОДЗИ С ГРАДИЕНТОМ И ЦЕНТРИРОВАНИЕМ */}
-          {/* Исправление: Обернули Swiper в div с фиксированной высотой и overflow-hidden */}
           <div className="relative w-full h-32 flex items-center justify-center mb-4 overflow-hidden -mt-2">
             <Swiper
               modules={[Autoplay]}
@@ -84,11 +81,11 @@ export default function WelcomePage() {
               slidesPerView={3}
               centeredSlides={true}
               loop={true}
+              // Важно: используем realIndex и вызываем вибрацию
               onSlideChange={(swiper) => {
-                const realIndex = swiper.realIndex;
-                const emoji = AVAILABLE_EMOJIS[realIndex % AVAILABLE_EMOJIS.length];
+                const emoji = AVAILABLE_EMOJIS[swiper.realIndex];
                 setSelectedEmoji(emoji);
-                triggerHaptic('light'); // Вибрация при свайпе!
+                triggerHaptic('light'); 
               }}
               className="w-full h-full"
             >
@@ -96,7 +93,7 @@ export default function WelcomePage() {
                 <SwiperSlide key={index} className="flex items-center justify-center">
                   {({ isActive }) => (
                     <div 
-                      className={`w-20 h-20 flex items-center justify-center rounded-full border-2 transition-all duration-300
+                      className={`w-20 h-20 flex items-center justify-center rounded-full border-2 transition-all duration-300 cursor-pointer
                         ${isActive 
                           ? 'border-blue-400 bg-blue-900/40 scale-105 shadow-[0_0_25px_rgba(100,149,237,0.4)]' 
                           : 'border-white/5 bg-[#1e293b]/50 scale-90 opacity-40'}`}
@@ -114,10 +111,9 @@ export default function WelcomePage() {
           </div>
         </div>
 
-        {/* СРЕДНЯЯ ЧАСТЬ (Поля ввода) - теперь сжимается и центрируется */}
+        {/* СРЕДНЯЯ ЧАСТЬ */}
         <div className="w-full flex-1 flex flex-col justify-center space-y-4 max-h-[60%]">
           
-          {/* ПОЛЕ ИМЕНИ */}
           <input
             type="text"
             placeholder="Ваше имя"
@@ -126,35 +122,36 @@ export default function WelcomePage() {
             className="w-full bg-[#1e293b] border border-white/5 rounded-2xl py-4 px-6 text-center text-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-600"
           />
 
-          {/* ПРОДОЛЖИТЕЛЬНОСТЬ ЦИКЛА */}
-          <div className="bg-[#1e293b]/50 p-5 rounded-[28px] border border-white/5 shadow-inner">
+          <div className="bg-[#1e293b]/50 p-5 rounded-[28px] border border-white/5">
             <p className="text-[11px] text-gray-400 uppercase tracking-widest mb-3 text-center font-bold">Продолжительность цикла</p>
-            <div className="flex items-center justify-between bg-[#0e1a2b] rounded-xl p-1 border border-white/5 shadow-lg">
+            <div className="flex items-center justify-between bg-[#0e1a2b] rounded-xl p-1 border border-white/5">
               <button 
-                onClick={() => { setCycleLength(Math.max(21, cycleLength - 1)); triggerHaptic('rigid'); }} 
-                className="w-12 h-12 flex items-center justify-center text-2xl font-light hover:text-blue-400 text-blue-400 active:scale-90 transition-transform duration-100"
+                onClick={() => { setCycleLength(Math.max(21, cycleLength - 1)); triggerHaptic('soft'); }} 
+                className="w-12 h-12 flex items-center justify-center text-2xl font-light text-blue-400 active:scale-75 transition-transform"
               >—</button>
               <span className="text-xl font-bold">{cycleLength} дней</span>
               <button 
-                onClick={() => { setCycleLength(Math.min(45, cycleLength + 1)); triggerHaptic('rigid'); }} 
-                className="w-12 h-12 flex items-center justify-center text-2xl font-light hover:text-blue-400 text-blue-400 active:scale-90 transition-transform duration-100"
+                onClick={() => { setCycleLength(Math.min(45, cycleLength + 1)); triggerHaptic('soft'); }} 
+                className="w-12 h-12 flex items-center justify-center text-2xl font-light text-blue-400 active:scale-75 transition-transform"
               >+</button>
             </div>
           </div>
 
-          {/* ДАТА ПОСЛЕДНИХ МЕСЯЧНЫХ */}
-          <div className="bg-[#1e293b]/50 p-5 rounded-[28px] border border-white/5 shadow-inner">
+          <div className="bg-[#1e293b]/50 p-5 rounded-[28px] border border-white/5">
             <p className="text-[11px] text-gray-400 uppercase tracking-widest mb-3 text-center font-bold">Последние месячные</p>
             <input 
               type="date" 
               value={lastPeriod}
-              onChange={(e) => setLastPeriod(e.target.value)}
-              className="w-full bg-[#0e1a2b] border border-white/5 rounded-xl py-3.5 px-6 text-blue-400 text-center text-lg outline-none appearance-none focus:border-blue-500 transition-colors"
+              onChange={(e) => {
+                setLastPeriod(e.target.value);
+                triggerHaptic('light');
+              }}
+              className="w-full bg-[#0e1a2b] border border-white/5 rounded-xl py-3.5 px-6 text-blue-400 text-center text-lg outline-none"
             />
           </div>
         </div>
 
-        {/* НИЖНЯЯ ЧАСТЬ (Кнопка старта) */}
+        {/* НИЖНЯЯ ЧАСТЬ */}
         <div className="w-full pb-6 pt-4">
           <button
             onClick={handleContinue}
