@@ -13,7 +13,6 @@ export default function Dashboard() {
   const [daysUntilEnd, setDaysUntilEnd] = useState<number | null>(null)
   const [ovulationDays, setOvulationDays] = useState<number | null>(null)
   
-  // Состояния для модального окна действий
   const [isActionModalOpen, setIsActionModalOpen] = useState(false)
 
   useEffect(() => {
@@ -32,7 +31,19 @@ export default function Dashboard() {
     }
   };
 
-  // Универсальная функция добавления событий (Секс, Настроение)
+  // --- ТЕСТОВЫЙ ПЕРЕКЛЮЧАТЕЛЬ ---
+  const togglePremiumTest = () => {
+    const newStatus = !isPremium;
+    setIsPremium(newStatus);
+    localStorage.setItem("user_subscription", newStatus ? "premium" : "base");
+    triggerHaptic('heavy');
+    
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.showAlert) {
+      tg.showAlert(`Тестовый режим: подписка ${newStatus ? 'АКТИВИРОВАНА' : 'ДЕАКТИВИРОВАНА'}`);
+    }
+  };
+
   const handleAddEvent = async (type: string, value: string) => {
     if (!isPremium) {
       const tg = (window as any).Telegram?.WebApp;
@@ -58,7 +69,6 @@ export default function Dashboard() {
     if (!error) {
       triggerHaptic('heavy');
       setIsActionModalOpen(false);
-      // Перезагружаем страницу или обновляем календарь локально
       window.location.reload(); 
     }
   };
@@ -156,7 +166,10 @@ export default function Dashboard() {
           <div>
             <div className="flex items-center gap-2 mb-0.5">
               <h2 className="text-xl font-bold leading-tight">Привет!</h2>
-              <div className={`px-1.5 py-0.5 rounded text-[8px] uppercase font-bold tracking-wider border ${
+              {/* ПЕРЕКЛЮЧАТЕЛЬ ДЛЯ ТЕСТОВ */}
+              <div 
+                onClick={togglePremiumTest}
+                className={`px-1.5 py-0.5 rounded text-[8px] uppercase font-bold tracking-wider border cursor-pointer transition-all active:scale-95 ${
                 isPremium ? "bg-yellow-500/10 border-yellow-500/40 text-yellow-500" : "bg-white/5 border-white/10 text-gray-500"
               }`}>
                 {isPremium ? "Премиум" : "Базовая"}
@@ -175,7 +188,6 @@ export default function Dashboard() {
       </div>
 
       <div className="px-6 flex-1 flex flex-col justify-between max-w-[402px] mx-auto w-full relative">
-        
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#1e293b]/50 p-3 rounded-2xl border border-white/5 backdrop-blur-sm shadow-inner text-center">
             <p className="text-[9px] text-gray-400 uppercase mb-1">
@@ -227,7 +239,6 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* Кнопка ПЛЮС (FAB) */}
         <button 
           onClick={() => { triggerHaptic('medium'); setIsActionModalOpen(true); }}
           className="absolute -right-2 bottom-20 w-14 h-14 bg-pink-600 rounded-full shadow-[0_0_20px_rgba(219,39,119,0.4)] flex items-center justify-center text-3xl z-40 active:scale-90 transition-transform border-2 border-white/10"
@@ -236,7 +247,6 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* МОДАЛЬНОЕ ОКНО ДЕЙСТВИЙ */}
       {isActionModalOpen && (
         <div 
           className="fixed inset-0 bg-[#0e1a2b]/90 backdrop-blur-md z-[100] flex flex-col justify-center items-center px-6"
@@ -247,7 +257,6 @@ export default function Dashboard() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-center font-bold text-xl mb-6">Добавить отметку</h3>
-            
             <div className="flex flex-col gap-3">
               <button 
                 onClick={() => handleAddEvent('sex', 'protected')}
@@ -255,14 +264,12 @@ export default function Dashboard() {
               >
                 ❤️ Секс (ПА)
               </button>
-
               <button 
                 onClick={() => handleAddEvent('mood', 'happy')}
                 className="w-full py-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-bold flex items-center justify-center gap-3 active:scale-95 transition-all"
               >
                 😊 Настроение: Супер
               </button>
-
               <button 
                 onClick={() => handleAddEvent('mood', 'sad')}
                 className="w-full py-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold flex items-center justify-center gap-3 active:scale-95 transition-all"
@@ -270,13 +277,7 @@ export default function Dashboard() {
                 😔 Настроение: Грустно
               </button>
             </div>
-
-            <button 
-              onClick={() => setIsActionModalOpen(false)}
-              className="w-full mt-6 text-gray-500 font-medium text-sm"
-            >
-              Отмена
-            </button>
+            <button onClick={() => setIsActionModalOpen(false)} className="w-full mt-6 text-gray-500 font-medium text-sm">Отмена</button>
           </div>
         </div>
       )}

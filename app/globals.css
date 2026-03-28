@@ -196,3 +196,12 @@ button:focus {
 }
 
 .btn-action:active { transform: scale(0.95); }
+
+.calendar-container .tile-mood::before {
+  content: attr(data-mood); /* Будем брать смайлик из атрибута */
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+}
