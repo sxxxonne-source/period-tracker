@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const { userId } = await req.json();
-    const botToken = process.env.TELEGRAM_BOT_TOKEN; // Добавь в .env.local
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
     // Параметры платежа
     const invoiceData = {
