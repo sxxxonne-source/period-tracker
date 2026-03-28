@@ -14,7 +14,7 @@ export default function Dashboard() {
   const [ovulationDays, setOvulationDays] = useState<number | null>(null)
   
   const [isActionModalOpen, setIsActionModalOpen] = useState(false)
-  const [isClosing, setIsClosing] = useState(false) // Для эффекта "вжик"
+  const [isClosing, setIsClosing] = useState(false) 
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -50,12 +50,11 @@ export default function Dashboard() {
     }
 
     triggerHaptic('heavy');
-    setIsClosing(true); // Запускаем анимацию ухода вниз
+    setIsClosing(true); 
 
     const userId = localStorage.getItem("telegram_user_id") || "test_user";
     const today = new Date().toISOString().split('T')[0];
     
-    // Отправляем данные, но ждем завершения анимации перед закрытием
     const supabaseRequest = supabase.from("events").insert({
       user_id: userId,
       date: today,
@@ -63,7 +62,6 @@ export default function Dashboard() {
       value: value
     });
 
-    // Ждем 250мс (время анимации "вжика")
     await new Promise(resolve => setTimeout(resolve, 250));
 
     const { error } = await supabaseRequest;
@@ -132,7 +130,8 @@ export default function Dashboard() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold">Привет!</h2>
+              {/* "Привет!" - теперь маленький и голубой */}
+              <span className="text-xs text-blue-400 font-medium tracking-wide">Привет!</span>
               <div 
                 onClick={togglePremiumTest}
                 className={`px-1.5 py-0.5 rounded text-[7px] uppercase font-bold border cursor-pointer transition-all active:scale-95 ${
@@ -141,7 +140,8 @@ export default function Dashboard() {
                 {isPremium ? "Премиум" : "Базовая"}
               </div>
             </div>
-            <p className="text-[10px] text-blue-400 font-medium uppercase tracking-wider">{name}</p>
+            {/* Имя пользователя - теперь крупное и белое */}
+            <h2 className="text-xl font-bold text-white leading-tight">{name}</h2>
           </div>
         </div>
         <button onClick={() => window.location.href = "/settings"} className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-lg">⚙️</button>
@@ -172,6 +172,7 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* НИЖНИЕ КНОПКИ */}
         <div className="flex items-center gap-3 mt-4 mb-2">
           <button 
             onClick={handleQuickAdd}
@@ -182,9 +183,13 @@ export default function Dashboard() {
 
           <button 
             onClick={() => { triggerHaptic('medium'); setIsActionModalOpen(true); }}
-            className="w-12 h-12 bg-pink-600 rounded-xl shadow-lg flex items-center justify-center text-2xl flex-shrink-0 active:scale-90 transition-transform"
+            className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-2xl flex-shrink-0 active:scale-90 transition-all border-2 ${
+              isPremium 
+                ? "bg-pink-600 border-pink-500 text-white shadow-pink-900/20" 
+                : "bg-gray-800 border-gray-700 text-gray-500 shadow-none"
+            }`}
           >
-            +
+            {isPremium ? "+" : "🔒"}
           </button>
 
           <Link href="/history" className="flex-1">
@@ -195,7 +200,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* МОДАЛКА С ЭФФЕКТОМ ВЖИК */}
+      {/* МОДАЛКА */}
       {isActionModalOpen && (
         <div 
           className={`fixed inset-0 z-[100] flex items-end justify-center px-6 pb-24 bg-black/20 backdrop-blur-[2px] transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`}

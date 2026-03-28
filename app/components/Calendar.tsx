@@ -13,7 +13,6 @@ type Period = {
   duration: number
 }
 
-// Тип для событий (секс, симптомы и т.д.)
 type UserEvent = {
   date: string
   type: string
@@ -21,16 +20,21 @@ type UserEvent = {
 
 export default function CycleCalendar() {
   const [periods, setPeriods] = useState<Period[]>([])
-  const [events, setEvents] = useState<UserEvent[]>([]) // Состояние для сердечек
+  const [events, setEvents] = useState<UserEvent[]>([])
   const [value, setValue] = useState<Value>(null); 
   const [cycleLength, setCycleLength] = useState(28);
+  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedCycle = localStorage.getItem("cycle_length");
       if (savedCycle) setCycleLength(Number(savedCycle));
+      
+      // Проверяем статус премиума из localStorage
+      setIsPremium(localStorage.getItem("user_subscription") === "premium");
+      
       fetchPeriods();
-      fetchEvents(); // Загружаем события ПА
+      fetchEvents();
     }
   }, [])
 
@@ -45,14 +49,13 @@ export default function CycleCalendar() {
     if (data) setPeriods(data)
   }
 
-  // Загрузка ПА из новой таблицы
   async function fetchEvents() {
     const userId = (typeof window !== "undefined" && localStorage.getItem("telegram_user_id")) || "test_user"
     const { data } = await supabase
       .from("events")
       .select("date, type")
       .eq("user_id", userId)
-      .eq("type", "sex") // Берем только отметки секса
+      .eq("type", "sex")
 
     if (data) setEvents(data)
   }
@@ -60,59 +63,68 @@ export default function CycleCalendar() {
   const getTileClassName = ({ date, view }: { date: Date; view: string }) => {
     if (view !== 'month') return null
     const dateStr = date.toISOString().split('T')[0]
-    
-    // Массив для хранения всех подходящих классов
     let classes: string[] = []
 
-    // 1. Проверка на СЕКС (Сердечко) - добавляем класс всегда, если есть событие
-    const hasSex = events.some(e => e.date === dateStr)
-    if (hasSex) classes.push('tile-sex')
+    // 1. Секс (Сердечко)
+    if (events.some(e => e.date === dateStr)) classes.push('tile-sex')
 
-    // 2. ПРИОРИТЕТ: Реальные месячные (Розовый)
-    const isRecordedPeriod = periods.some(p => {
-      const start = new Date(p.start_date)
-      const end = new Date(start)
-      end.setDate(start.getDate() + (p.duration - 1))
-      return date >= start && date <= end
+    // 2. Реальные записанные месячные (розовый)
+    const isRecorded = periods.some(p => {
+      const start = new Date(p.start_date); start.setHours(0,0,0,0);
+      const end = new Date(start);
+      end.setDate(start.getDate() + (p.duration - 1));
+      return date >= start && date <= end;
     })
     
-    if (isRecordedPeriod) {
+    if (isRecorded) {
       classes.push('tile-period')
-    } else if (periods.length > 0) {
-      // 3. Логика ПРОГНОЗА, ОВУЛЯЦИИ И ФЕРТИЛЬНОСТИ
-      const lastRecordedStart = new Date(periods[0].start_date)
-      const duration = periods[0].duration || 5
-      const predictedStart = new Date(lastRecordedStart)
-      predictedStart.setDate(lastRecordedStart.getDate() + cycleLength)
-      const predictedEnd = new Date(predictedStart)
-      predictedEnd.setDate(predictedStart.getDate() + (duration - 1))
+      return classes.join(' ')
+    }
 
-      if (date >= predictedStart && date <= predictedEnd) {
-        classes.push('tile-predicted')
-      }
-
-      const ovulationDate = new Date(predictedStart)
-      ovulationDate.setDate(ovulationDate.getDate() - 14)
+    // 3. ЛОГИКА ПРОГНОЗА (на год вперед для Premium)
+    if (periods.length > 0) {
+      const lastStart = new Date(periods[0].start_date);
+      const duration = periods[0].duration || 5;
       
-      if (dateStr === ovulationDate.toISOString().split('T')[0]) {
-        classes.push('tile-ovulation')
-      } else {
-        const fertStart = new Date(ovulationDate)
-        fertStart.setDate(ovulationDate.getDate() - 3)
-        const fertEnd = new Date(ovulationDate)
-        fertEnd.setDate(ovulationDate.getDate() + 1)
-        if (date >= fertStart && date <= fertEnd) {
-          classes.push('tile-fertility')
+      // Сколько циклов прогнозировать? 13 циклов ~ 1 год.
+      const cyclesToPredict = isPremium ? 13 : 1;
+
+      for (let i = 1; i <= cyclesToPredict; i++) {
+        const pStart = new Date(lastStart);
+        pStart.setDate(lastStart.getDate() + (cycleLength * i));
+        const pEnd = new Date(pStart);
+        pEnd.setDate(pStart.getDate() + (duration - 1));
+
+        // Если дата попадает в этот прогнозный цикл
+        if (date >= pStart && date <= pEnd) {
+          classes.push('tile-predicted');
+          break;
+        }
+
+        // Овуляция и фертильность для каждого прогнозного цикла
+        const ovu = new Date(pStart);
+        ovu.setDate(pStart.getDate() - 14);
+        const ovuStr = ovu.toISOString().split('T')[0];
+
+        if (dateStr === ovuStr) {
+          classes.push('tile-ovulation');
+          break;
+        }
+
+        const fStart = new Date(ovu); fStart.setDate(ovu.getDate() - 3);
+        const fEnd = new Date(ovu); fEnd.setDate(ovu.getDate() + 1);
+        if (date >= fStart && date <= fEnd) {
+          classes.push('tile-fertility');
+          break;
         }
       }
     }
 
-    // Выделение текущего дня
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    // Текущий день
+    const today = new Date(); today.setHours(0,0,0,0);
     if (date.getTime() === today.getTime()) classes.push('tile-today')
 
-    return classes.join(' ') // Возвращаем строку классов, разделенных пробелом
+    return classes.join(' ')
   }
 
   return (
