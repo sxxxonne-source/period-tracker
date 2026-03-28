@@ -8,13 +8,18 @@ import { supabase } from "../lib/supabase"
 export default function Dashboard() {
   const [name, setName] = useState("")
   const [avatar, setAvatar] = useState("🌸")
+  const [isPremium, setIsPremium] = useState(false) // Статус подписки
   const [nextPeriodDays, setNextPeriodDays] = useState<number | null>(null)
+  const [daysUntilEnd, setDaysUntilEnd] = useState<number | null>(null)
   const [ovulationDays, setOvulationDays] = useState<number | null>(null)
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setName(localStorage.getItem("user_name") || "Гость")
       setAvatar(localStorage.getItem("user_avatar_emoji") || "🌸")
+      // Проверка подписки (позже заменим на запрос к БД)
+      setIsPremium(localStorage.getItem("user_subscription") === "premium")
+      
       calculateCycle()
     }
   }, [])
@@ -32,8 +37,6 @@ export default function Dashboard() {
     const tg = (window as any).Telegram?.WebApp;
     const today = new Date().toISOString().split('T')[0];
     const userId = localStorage.getItem("telegram_user_id") || "test_user";
-
-    // ИСПРАВЛЕНИЕ 1: Берем длительность из настроек (по умолчанию 5)
     const savedDuration = Number(localStorage.getItem("period_duration")) || 5;
 
     if (tg?.showPopup) {
@@ -48,13 +51,11 @@ export default function Dashboard() {
       }, async (buttonId: string) => {
         if (buttonId === 'yes') {
           triggerHaptic('heavy');
-          
           await supabase.from("periods").insert({
             user_id: userId,
             start_date: today,
-            duration: savedDuration // Используем динамическое значение
+            duration: savedDuration
           });
-          
           calculateCycle();
           window.location.reload(); 
         }
@@ -77,44 +78,67 @@ export default function Dashboard() {
     const userId = localStorage.getItem("telegram_user_id") || "test_user"
     const { data } = await supabase
       .from("periods")
-      .select("start_date")
+      .select("start_date, duration")
       .eq("user_id", userId)
       .order("start_date", { ascending: false })
       .limit(1)
 
     let lastDateStr = data?.[0]?.start_date || localStorage.getItem("last_period")
+    let duration = data?.[0]?.duration || Number(localStorage.getItem("period_duration")) || 5
+    
     if (!lastDateStr) return
 
-    const last = new Date(lastDateStr)
-    // ИСПРАВЛЕНИЕ 2: Берем цикл из настроек
+    const lastStart = new Date(lastDateStr)
     const cycleLen = Number(localStorage.getItem("cycle_length")) || 28
-
-    const next = new Date(last)
-    next.setDate(next.getDate() + cycleLen)
-
-    const ovu = new Date(next)
-    ovu.setDate(ovu.getDate() - 14)
-
-    const today = new Date()
+    const today = new Date();
     today.setHours(0, 0, 0, 0)
 
-    const diffPeriod = Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    const diffOvu = Math.ceil((ovu.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    const lastEnd = new Date(lastStart)
+    lastEnd.setDate(lastStart.getDate() + (duration - 1))
 
-    setNextPeriodDays(diffPeriod)
-    setOvulationDays(diffOvu)
+    const nextStart = new Date(lastStart)
+    nextStart.setDate(lastStart.getDate() + cycleLen)
+
+    if (today >= lastStart && today <= lastEnd) {
+      const diffEnd = Math.ceil((lastEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      setDaysUntilEnd(diffEnd + 1)
+      setNextPeriodDays(null)
+    } else {
+      const diffNext = Math.ceil((nextStart.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      setNextPeriodDays(diffNext)
+      setDaysUntilEnd(null)
+    }
+
+    const ovu = new Date(nextStart)
+    ovu.setDate(ovu.getDate() - 14)
+    setOvulationDays(Math.ceil((ovu.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
   }
 
   return (
     <main className="h-screen bg-[#0e1a2b] text-white font-sans overflow-hidden flex flex-col pb-6">
       
+      {/* HEADER С ПОДПИСКОЙ */}
       <div className="w-full px-6 pt-6 flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-blue-900/30 border border-blue-400/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(100,149,237,0.2)]">
-            {avatar}
+          <div className="relative">
+            <div className="w-11 h-11 rounded-full bg-blue-900/30 border border-blue-400/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(100,149,237,0.2)]">
+              {avatar}
+            </div>
+            {isPremium && (
+              <div className="absolute -top-1 -right-1 text-[12px] drop-shadow-md">👑</div>
+            )}
           </div>
           <div>
-            <h2 className="text-xl font-bold leading-tight">Привет!</h2>
+            <div className="flex items-center gap-2 mb-0.5">
+              <h2 className="text-xl font-bold leading-tight">Привет!</h2>
+              <div className={`px-1.5 py-0.5 rounded text-[8px] uppercase font-bold tracking-wider border ${
+                isPremium 
+                  ? "bg-yellow-500/10 border-yellow-500/40 text-yellow-500" 
+                  : "bg-white/5 border-white/10 text-gray-500"
+              }`}>
+                {isPremium ? "Премиум" : "Базовая"}
+              </div>
+            </div>
             <p className="text-xs text-blue-400 font-medium uppercase tracking-wider">{name}</p>
           </div>
         </div>
@@ -131,11 +155,16 @@ export default function Dashboard() {
         
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#1e293b]/50 p-3 rounded-2xl border border-white/5 backdrop-blur-sm shadow-inner text-center">
-            <p className="text-[9px] text-gray-400 uppercase mb-1">Менструация</p>
+            <p className="text-[9px] text-gray-400 uppercase mb-1">
+              {daysUntilEnd !== null ? "До конца" : "Менструация"}
+            </p>
             <p className="text-md font-bold text-blue-400">
-              {nextPeriodDays !== null ? (nextPeriodDays <= 0 ? "Сегодня" : `${nextPeriodDays} дн.`) : '...'}
+              {daysUntilEnd !== null 
+                ? `${daysUntilEnd} дн.` 
+                : (nextPeriodDays !== null ? (nextPeriodDays <= 0 ? "Сегодня" : `${nextPeriodDays} дн.`) : '...')}
             </p>
           </div>
+
           <div className="bg-[#1e293b]/50 p-3 rounded-2xl border border-white/5 backdrop-blur-sm shadow-inner text-center">
             <p className="text-[9px] text-gray-400 uppercase mb-1">Овуляция</p>
             <p className="text-md font-bold text-pink-400">
