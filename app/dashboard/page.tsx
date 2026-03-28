@@ -8,18 +8,19 @@ import { supabase } from "../lib/supabase"
 export default function Dashboard() {
   const [name, setName] = useState("")
   const [avatar, setAvatar] = useState("🌸")
-  const [isPremium, setIsPremium] = useState(false) // Статус подписки
+  const [isPremium, setIsPremium] = useState(false)
   const [nextPeriodDays, setNextPeriodDays] = useState<number | null>(null)
   const [daysUntilEnd, setDaysUntilEnd] = useState<number | null>(null)
   const [ovulationDays, setOvulationDays] = useState<number | null>(null)
+  
+  // Состояния для модального окна действий
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setName(localStorage.getItem("user_name") || "Гость")
       setAvatar(localStorage.getItem("user_avatar_emoji") || "🌸")
-      // Проверка подписки (позже заменим на запрос к БД)
       setIsPremium(localStorage.getItem("user_subscription") === "premium")
-      
       calculateCycle()
     }
   }, [])
@@ -31,9 +32,39 @@ export default function Dashboard() {
     }
   };
 
+  // Универсальная функция добавления событий (Секс, Настроение)
+  const handleAddEvent = async (type: string, value: string) => {
+    if (!isPremium) {
+      const tg = (window as any).Telegram?.WebApp;
+      triggerHaptic('medium');
+      if (tg?.showAlert) {
+        tg.showAlert("🌟 Эта функция доступна только в Luna Premium!");
+      } else {
+        alert("Эта функция доступна только в Premium подписке");
+      }
+      return;
+    }
+
+    const userId = localStorage.getItem("telegram_user_id") || "test_user";
+    const today = new Date().toISOString().split('T')[0];
+
+    const { error } = await supabase.from("events").insert({
+      user_id: userId,
+      date: today,
+      type: type,
+      value: value
+    });
+
+    if (!error) {
+      triggerHaptic('heavy');
+      setIsActionModalOpen(false);
+      // Перезагружаем страницу или обновляем календарь локально
+      window.location.reload(); 
+    }
+  };
+
   const handleQuickAdd = async () => {
     if (typeof window === "undefined") return;
-    
     const tg = (window as any).Telegram?.WebApp;
     const today = new Date().toISOString().split('T')[0];
     const userId = localStorage.getItem("telegram_user_id") || "test_user";
@@ -56,7 +87,6 @@ export default function Dashboard() {
             start_date: today,
             duration: savedDuration
           });
-          calculateCycle();
           window.location.reload(); 
         }
       });
@@ -74,7 +104,6 @@ export default function Dashboard() {
 
   async function calculateCycle() {
     if (typeof window === "undefined") return;
-
     const userId = localStorage.getItem("telegram_user_id") || "test_user"
     const { data } = await supabase
       .from("periods")
@@ -85,7 +114,6 @@ export default function Dashboard() {
 
     let lastDateStr = data?.[0]?.start_date || localStorage.getItem("last_period")
     let duration = data?.[0]?.duration || Number(localStorage.getItem("period_duration")) || 5
-    
     if (!lastDateStr) return
 
     const lastStart = new Date(lastDateStr)
@@ -95,7 +123,6 @@ export default function Dashboard() {
 
     const lastEnd = new Date(lastStart)
     lastEnd.setDate(lastStart.getDate() + (duration - 1))
-
     const nextStart = new Date(lastStart)
     nextStart.setDate(lastStart.getDate() + cycleLen)
 
@@ -115,26 +142,22 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="h-screen bg-[#0e1a2b] text-white font-sans overflow-hidden flex flex-col pb-6">
+    <main className="h-screen bg-[#0e1a2b] text-white font-sans overflow-hidden flex flex-col pb-6 relative">
       
-      {/* HEADER С ПОДПИСКОЙ */}
+      {/* HEADER */}
       <div className="w-full px-6 pt-6 flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-11 h-11 rounded-full bg-blue-900/30 border border-blue-400/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(100,149,237,0.2)]">
               {avatar}
             </div>
-            {isPremium && (
-              <div className="absolute -top-1 -right-1 text-[12px] drop-shadow-md">👑</div>
-            )}
+            {isPremium && <div className="absolute -top-1 -right-1 text-[12px] drop-shadow-md">👑</div>}
           </div>
           <div>
             <div className="flex items-center gap-2 mb-0.5">
               <h2 className="text-xl font-bold leading-tight">Привет!</h2>
               <div className={`px-1.5 py-0.5 rounded text-[8px] uppercase font-bold tracking-wider border ${
-                isPremium 
-                  ? "bg-yellow-500/10 border-yellow-500/40 text-yellow-500" 
-                  : "bg-white/5 border-white/10 text-gray-500"
+                isPremium ? "bg-yellow-500/10 border-yellow-500/40 text-yellow-500" : "bg-white/5 border-white/10 text-gray-500"
               }`}>
                 {isPremium ? "Премиум" : "Базовая"}
               </div>
@@ -151,7 +174,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div className="px-6 flex-1 flex flex-col justify-between max-w-[402px] mx-auto w-full">
+      <div className="px-6 flex-1 flex flex-col justify-between max-w-[402px] mx-auto w-full relative">
         
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#1e293b]/50 p-3 rounded-2xl border border-white/5 backdrop-blur-sm shadow-inner text-center">
@@ -203,7 +226,60 @@ export default function Dashboard() {
             </button>
           </Link>
         </div>
+
+        {/* Кнопка ПЛЮС (FAB) */}
+        <button 
+          onClick={() => { triggerHaptic('medium'); setIsActionModalOpen(true); }}
+          className="absolute -right-2 bottom-20 w-14 h-14 bg-pink-600 rounded-full shadow-[0_0_20px_rgba(219,39,119,0.4)] flex items-center justify-center text-3xl z-40 active:scale-90 transition-transform border-2 border-white/10"
+        >
+          +
+        </button>
       </div>
+
+      {/* МОДАЛЬНОЕ ОКНО ДЕЙСТВИЙ */}
+      {isActionModalOpen && (
+        <div 
+          className="fixed inset-0 bg-[#0e1a2b]/90 backdrop-blur-md z-[100] flex flex-col justify-center items-center px-6"
+          onClick={() => setIsActionModalOpen(false)}
+        >
+          <div 
+            className="w-full max-w-[300px] bg-[#1e293b] rounded-[32px] p-6 border border-white/10 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-center font-bold text-xl mb-6">Добавить отметку</h3>
+            
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => handleAddEvent('sex', 'protected')}
+                className="w-full py-4 rounded-2xl bg-pink-500/10 border border-pink-500/20 text-pink-400 font-bold flex items-center justify-center gap-3 active:scale-95 transition-all"
+              >
+                ❤️ Секс (ПА)
+              </button>
+
+              <button 
+                onClick={() => handleAddEvent('mood', 'happy')}
+                className="w-full py-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-bold flex items-center justify-center gap-3 active:scale-95 transition-all"
+              >
+                😊 Настроение: Супер
+              </button>
+
+              <button 
+                onClick={() => handleAddEvent('mood', 'sad')}
+                className="w-full py-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold flex items-center justify-center gap-3 active:scale-95 transition-all"
+              >
+                😔 Настроение: Грустно
+              </button>
+            </div>
+
+            <button 
+              onClick={() => setIsActionModalOpen(false)}
+              className="w-full mt-6 text-gray-500 font-medium text-sm"
+            >
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
