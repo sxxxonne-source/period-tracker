@@ -205,3 +205,27 @@ button:focus {
   transform: translateX(-50%);
   font-size: 8px;
 }
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-modal {
+  animation: slideUp 0.3s ease-out;
+}
+@keyframes slideDownOut {
+  from { transform: translateY(0) scale(1); opacity: 1; }
+  to { transform: translateY(100px) scale(0.9); opacity: 0; }
+}
+
+/* Класс, который мы будем добавлять при закрытии */
+.animate-out-swipe {
+  animation: slideDownOut 0.25s ease-in forwards; /* faster ease-in for 'whip' effect */
+}
+
+/* Для плавного исчезновения фона */
+.fade-out-bg {
+  opacity: 0;
+  transition: opacity 0.25s ease-in;
+}
