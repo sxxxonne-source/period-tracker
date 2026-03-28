@@ -40,10 +40,10 @@ export default function Dashboard() {
     tg?.showAlert?.(`Тестовый режим: подписка ${newStatus ? 'АКТИВИРОВАНА' : 'ДЕАКТИВИРОВАНА'}`);
   };
 
-  // Вспомогательная функция для записи в базу
   const savePeriodToDb = async () => {
     const today = new Date().toISOString().split('T')[0];
     const userId = localStorage.getItem("telegram_user_id") || "test_user";
+    // Используем сохраненную длительность из настроек
     const savedDuration = Number(localStorage.getItem("period_duration")) || 5;
 
     const { error } = await supabase.from("periods").insert({ 
@@ -54,9 +54,9 @@ export default function Dashboard() {
 
     if (!error) {
       triggerHaptic('medium');
+      // После сохранения пересчитываем цикл
+      calculateCycle();
       window.location.reload(); 
-    } else {
-      console.error("Ошибка сохранения:", error);
     }
   };
 
@@ -64,7 +64,6 @@ export default function Dashboard() {
     const tg = (window as any).Telegram?.WebApp;
     triggerHaptic('medium');
 
-    // Если мы в Telegram и метод showPopup доступен
     if (tg && tg.showPopup) {
       tg.showPopup({
         title: 'Luna Инфо',
@@ -74,15 +73,10 @@ export default function Dashboard() {
           { id: 'cancel', type: 'destructive', text: 'Отмена' }
         ]
       }, (buttonId: string) => {
-        if (buttonId === 'yes') {
-          savePeriodToDb();
-        }
+        if (buttonId === 'yes') savePeriodToDb();
       });
     } else {
-      // Запасной вариант (для браузера или если SDK залагал)
-      if (window.confirm("Отметить начало менструации сегодня?")) {
-        savePeriodToDb();
-      }
+      if (window.confirm("Отметить начало менструации сегодня?")) savePeriodToDb();
     }
   };
 
@@ -111,27 +105,51 @@ export default function Dashboard() {
       setIsActionModalOpen(false);
       setIsClosing(false);
       window.location.reload(); 
-    } else {
-      setIsClosing(false);
-      console.error(error);
     }
   };
 
   async function calculateCycle() {
     const userId = localStorage.getItem("telegram_user_id") || "test_user"
-    const { data } = await supabase.from("periods").select("*").eq("user_id", userId).order("start_date", { ascending: false }).limit(1)
+    
+    // 1. Получаем последнюю запись из БД
+    const { data } = await supabase
+      .from("periods")
+      .select("*")
+      .eq("user_id", userId)
+      .order("start_date", { ascending: false })
+      .limit(1)
 
-    let lastDateStr = data?.[0]?.start_date || localStorage.getItem("last_period")
+    // Если в БД пусто, берем дату из Onboarding (localStorage)
+    const lastDateStr = data?.[0]?.start_date || localStorage.getItem("last_period")
     if (!lastDateStr) return
 
+    // 2. Загружаем персональные параметры
     const cycleLen = Number(localStorage.getItem("cycle_length")) || 28
+    const birthYear = Number(localStorage.getItem("birth_year")) || 2000
+    
     const lastStart = new Date(lastDateStr)
-    const today = new Date(); today.setHours(0, 0, 0, 0)
-    const nextStart = new Date(lastStart); nextStart.setDate(lastStart.getDate() + cycleLen)
+    const today = new Date(); 
+    today.setHours(0, 0, 0, 0)
 
-    setNextPeriodDays(Math.ceil((nextStart.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
-    const ovu = new Date(nextStart); ovu.setDate(ovu.getDate() - 14)
-    setOvulationDays(Math.ceil((ovu.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
+    // 3. РАСЧЕТ СЛЕДУЮЩЕГО ПЕРИОДА
+    const nextStart = new Date(lastStart)
+    nextStart.setDate(lastStart.getDate() + cycleLen)
+
+    const diffMs = nextStart.getTime() - today.getTime()
+    const daysUntilPeriod = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+    setNextPeriodDays(daysUntilPeriod)
+
+    // 4. УМНЫЙ РАСЧЕТ ОВУЛЯЦИИ
+    // Корректируем лютеиновую фазу по возрасту (биологический стандарт)
+    const currentYear = new Date().getFullYear()
+    const age = currentYear - birthYear
+    const lutealPhase = age > 35 ? 13 : 14 
+
+    const ovulationDate = new Date(nextStart)
+    ovulationDate.setDate(ovulationDate.getDate() - lutealPhase)
+
+    const ovuDiffMs = ovulationDate.getTime() - today.getTime()
+    setOvulationDays(Math.ceil(ovuDiffMs / (1000 * 60 * 60 * 24)))
   }
 
   return (
@@ -165,22 +183,28 @@ export default function Dashboard() {
 
       <div className="px-6 flex-1 flex flex-col max-w-[400px] mx-auto w-full">
         
+        {/* Информационные плашки */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-[#1e293b]/50 p-2.5 rounded-2xl border border-white/5 text-center">
-            <p className="text-[8px] text-gray-400 uppercase mb-0.5">Менструация</p>
-            <p className="text-sm font-bold text-blue-400">{nextPeriodDays ?? '...'} дн.</p>
+          <div className="bg-[#1e293b]/50 p-3 rounded-2xl border border-white/5 text-center">
+            <p className="text-[8px] text-gray-400 uppercase mb-0.5 tracking-widest">До месячных</p>
+            <p className={`text-sm font-bold ${nextPeriodDays !== null && nextPeriodDays <= 3 ? 'text-red-400 animate-pulse' : 'text-blue-400'}`}>
+              {nextPeriodDays !== null ? (nextPeriodDays > 0 ? `${nextPeriodDays} дн.` : 'Сегодня') : '...'}
+            </p>
           </div>
-          <div className="bg-[#1e293b]/50 p-2.5 rounded-2xl border border-white/5 text-center">
-            <p className="text-[8px] text-gray-400 uppercase mb-0.5">Овуляция</p>
-            <p className="text-sm font-bold text-pink-400">{ovulationDays ?? '...'} дн.</p>
+          <div className="bg-[#1e293b]/50 p-3 rounded-2xl border border-white/5 text-center">
+            <p className="text-[8px] text-gray-400 uppercase mb-0.5 tracking-widest">До овуляции</p>
+            <p className="text-sm font-bold text-pink-400">
+              {ovulationDays !== null ? (ovulationDays > 0 ? `${ovulationDays} дн.` : 'Сегодня') : '...'}
+            </p>
           </div>
         </div>
 
+        {/* Календарь */}
         <div className="flex-1 flex flex-col justify-start">
           <div className="flex items-center justify-between px-2 mb-2">
-            <h3 className="text-xs font-semibold">Отслеживание цикла</h3>
+            <h3 className="text-[10px] font-bold uppercase text-gray-400 tracking-tighter">Ваш цикл</h3>
             <span className="text-[8px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30 font-mono uppercase">
-              {new Date().toLocaleString('ru', { month: 'short', year: 'numeric' })}
+              {new Date().toLocaleString('ru', { month: 'long' })}
             </span>
           </div>
           <div className="bg-[#1e293b]/40 rounded-[24px] p-1 border border-white/5 shadow-2xl backdrop-blur-md">
@@ -192,9 +216,9 @@ export default function Dashboard() {
         <div className="flex items-center gap-3 mt-4 mb-2">
           <button 
             onClick={handleQuickAdd}
-            className="flex-1 py-3.5 rounded-xl bg-blue-600 font-bold text-[10px] uppercase tracking-wide active:scale-95 transition-all shadow-[0_4px_15px_rgba(37,99,235,0.4)]"
+            className="flex-1 py-4 rounded-2xl bg-blue-600 font-bold text-[10px] uppercase tracking-wider active:scale-95 transition-all shadow-[0_8px_20px_rgba(37,99,235,0.3)]"
           >
-            Отметить начало
+            Отметить сегодня
           </button>
 
           <button 
@@ -209,31 +233,31 @@ export default function Dashboard() {
           </button>
 
           <Link href="/history" className="flex-1">
-            <button className="w-full py-3.5 rounded-xl bg-[#1e293b] border border-white/10 font-bold text-[10px] uppercase tracking-wide active:scale-95 transition-all">
+            <button className="w-full py-4 rounded-2xl bg-[#1e293b] border border-white/10 font-bold text-[10px] uppercase tracking-wider active:scale-95 transition-all">
               История
             </button>
           </Link>
         </div>
       </div>
 
-      {/* МОДАЛКА */}
+      {/* Модальное окно */}
       {isActionModalOpen && (
         <div 
-          className={`fixed inset-0 z-[100] flex items-end justify-center px-6 pb-24 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
+          className={`fixed inset-0 z-[100] flex items-end justify-center px-6 pb-24 bg-black/60 backdrop-blur-[4px] transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
           onClick={() => setIsActionModalOpen(false)}
         >
           <div 
-            className={`w-full max-w-[320px] bg-[#1e293b] rounded-[30px] p-6 border border-white/10 shadow-2xl transform transition-all duration-300 
+            className={`w-full max-w-[320px] bg-[#1e293b] rounded-[32px] p-6 border border-white/10 shadow-2xl transform transition-all duration-300 
               ${isClosing ? 'translate-y-[100px] opacity-0' : 'translate-y-0 opacity-100'} `}
             onClick={e => e.stopPropagation()}
           >
-            <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mb-5" />
-            <h3 className="text-center font-bold text-lg mb-6 text-white/90">Добавить отметку</h3>
+            <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6" />
+            <h3 className="text-center font-bold text-lg mb-6 text-white/90 tracking-tight">Добавить событие</h3>
             <div className="flex flex-col gap-3">
-              <button onClick={() => handleAddEvent('sex', 'protected')} className="w-full py-4 rounded-2xl bg-pink-500/10 border border-pink-500/20 text-pink-400 font-bold active:scale-95 transition-all">❤️ Секс (ПА)</button>
-              <button onClick={() => handleAddEvent('mood', 'happy')} className="w-full py-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-bold active:scale-95 transition-all">😊 Настроение</button>
+              <button onClick={() => handleAddEvent('sex', 'protected')} className="w-full py-4 rounded-2xl bg-pink-500/10 border border-pink-500/20 text-pink-400 font-bold active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">❤️ Секс (ПА)</button>
+              <button onClick={() => handleAddEvent('mood', 'happy')} className="w-full py-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-bold active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">😊 Настроение</button>
             </div>
-            <button onClick={() => setIsActionModalOpen(false)} className="w-full mt-6 text-gray-500 text-sm font-medium">Отмена</button>
+            <button onClick={() => setIsActionModalOpen(false)} className="w-full mt-6 text-gray-500 text-xs font-bold uppercase tracking-widest">Закрыть</button>
           </div>
         </div>
       )}
