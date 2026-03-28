@@ -120,3 +120,13 @@ body {
 button:focus {
   outline: none !important;
 }
+.calendar-container .period {
+  background: #ff4d6d !important;
+  box-shadow: 0 0 10px rgba(255, 77, 109, 0.4);
+}
+
+/* Прогноз - чуть бледнее или с рамкой */
+.calendar-container .period-predicted {
+  background: rgba(255, 77, 109, 0.5) !important; /* 50% прозрачности */
+  border: 1px dashed #ff4d6d !important;
+}

@@ -3,25 +3,18 @@
 import Link from "next/link"
 import CycleCalendar from "../components/Calendar"
 import { useEffect, useState } from "react"
-import { t } from "../lib/translations"
 import { supabase } from "../lib/supabase"
 
 export default function Dashboard() {
   const [name, setName] = useState("")
   const [avatar, setAvatar] = useState("🌸")
-  const [lang, setLang] = useState<"ru" | "en">("ru")
   const [nextPeriodDays, setNextPeriodDays] = useState<number | null>(null)
   const [ovulationDays, setOvulationDays] = useState<number | null>(null)
 
   useEffect(() => {
-    // Безопасное чтение только после монтирования в браузере
     if (typeof window !== "undefined") {
-      const savedLang = localStorage.getItem("lang") || "ru"
-      setLang(savedLang as "ru" | "en")
-      
       setName(localStorage.getItem("user_name") || "Гость")
       setAvatar(localStorage.getItem("user_avatar_emoji") || "🌸")
-
       calculateCycle()
     }
   }, [])
@@ -40,11 +33,14 @@ export default function Dashboard() {
     const today = new Date().toISOString().split('T')[0];
     const userId = localStorage.getItem("telegram_user_id") || "test_user";
 
+    // ИСПРАВЛЕНИЕ 1: Берем длительность из настроек (по умолчанию 5)
+    const savedDuration = Number(localStorage.getItem("period_duration")) || 5;
+
     if (tg?.showPopup) {
       triggerHaptic('medium');
       tg.showPopup({
         title: 'Luna Инфо',
-        message: 'Месячные начались сегодня?',
+        message: `Отметить начало месячных сегодня? (${savedDuration} дн.)`,
         buttons: [
           { id: 'yes', type: 'default', text: 'Да, отметить' },
           { id: 'cancel', type: 'destructive', text: 'Отмена' }
@@ -52,13 +48,11 @@ export default function Dashboard() {
       }, async (buttonId: string) => {
         if (buttonId === 'yes') {
           triggerHaptic('heavy');
-          const savedCycleLen = localStorage.getItem("cycle_length");
-          const duration = Number(savedCycleLen) > 10 ? 5 : Number(savedCycleLen);
           
           await supabase.from("periods").insert({
             user_id: userId,
             start_date: today,
-            duration: duration || 5
+            duration: savedDuration // Используем динамическое значение
           });
           
           calculateCycle();
@@ -66,8 +60,12 @@ export default function Dashboard() {
         }
       });
     } else {
-      if (confirm("Месячные начались сегодня?")) {
-        await supabase.from("periods").insert({ user_id: userId, start_date: today, duration: 5 });
+      if (confirm(`Начать сегодня (${savedDuration} дн.)?`)) {
+        await supabase.from("periods").insert({ 
+          user_id: userId, 
+          start_date: today, 
+          duration: savedDuration 
+        });
         window.location.reload();
       }
     }
@@ -84,11 +82,11 @@ export default function Dashboard() {
       .order("start_date", { ascending: false })
       .limit(1)
 
-    // Проверка на наличие данных в БД или в localStorage
     let lastDateStr = data?.[0]?.start_date || localStorage.getItem("last_period")
     if (!lastDateStr) return
 
     const last = new Date(lastDateStr)
+    // ИСПРАВЛЕНИЕ 2: Берем цикл из настроек
     const cycleLen = Number(localStorage.getItem("cycle_length")) || 28
 
     const next = new Date(last)
@@ -176,9 +174,7 @@ export default function Dashboard() {
             </button>
           </Link>
         </div>
-
       </div>
-
     </main>
   )
 }

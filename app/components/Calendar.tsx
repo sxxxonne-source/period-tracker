@@ -5,7 +5,6 @@ import 'react-calendar/dist/Calendar.css'
 import { useState, useEffect } from "react"
 import { supabase } from "../lib/supabase"
 
-// Определяем типы для Calendar
 type ValuePiece = Date | null;
 type Value = ValuePiece | [ValuePiece, ValuePiece];
 
@@ -20,7 +19,6 @@ export default function CycleCalendar() {
   const [cycleLength, setCycleLength] = useState(28);
 
   useEffect(() => {
-    // Выполняется только на клиенте
     if (typeof window !== "undefined") {
       const savedCycle = localStorage.getItem("cycle_length");
       if (savedCycle) setCycleLength(Number(savedCycle));
@@ -29,49 +27,56 @@ export default function CycleCalendar() {
   }, [])
 
   async function fetchPeriods() {
-    // Безопасно берем ID из localStorage
     const userId = (typeof window !== "undefined" && localStorage.getItem("telegram_user_id")) || "test_user"
     
     const { data } = await supabase
       .from("periods")
       .select("start_date, duration")
       .eq("user_id", userId)
+      .order("start_date", { ascending: false }) // ВАЖНО: Сортируем, чтобы последний был первым
 
     if (data) setPeriods(data)
   }
-
-  const handleDateChange = (newValue: Value) => {
-    setValue(newValue);
-  };
 
   const getTileClassName = ({ date, view }: { date: Date; view: string }) => {
     if (view !== 'month') return null
 
     const dateStr = date.toISOString().split('T')[0]
     
-    // Используем cycleLength из состояния, чтобы не дергать localStorage при каждом рендере плитки
-    const currentCycleLength = cycleLength;
-
-    const isPeriod = periods.some(p => {
+    // 1. Отображение РЕАЛЬНЫХ данных из базы
+    const isRecordedPeriod = periods.some(p => {
       const start = new Date(p.start_date)
       const end = new Date(start)
       end.setDate(start.getDate() + (p.duration - 1))
       return date >= start && date <= end
     })
     
-    if (isPeriod) return 'period'
+    if (isRecordedPeriod) return 'period'
 
+    // 2. Логика ПРОГНОЗА на следующий месяц
     if (periods.length > 0) {
-      // Берем самый свежий период (обычно первый в массиве, если сортировка верная)
-      const lastPeriod = new Date(periods[0].start_date)
-      const nextPeriod = new Date(lastPeriod)
-      nextPeriod.setDate(lastPeriod.getDate() + currentCycleLength)
+      const lastRecordedStart = new Date(periods[0].start_date)
+      const duration = periods[0].duration || 5
+      
+      // Рассчитываем дату начала СЛЕДУЮЩЕГО цикла
+      const predictedStart = new Date(lastRecordedStart)
+      predictedStart.setDate(lastRecordedStart.getDate() + cycleLength)
 
-      const ovulationDate = new Date(nextPeriod)
+      const predictedEnd = new Date(predictedStart)
+      predictedEnd.setDate(predictedStart.getDate() + (duration - 1))
+
+      // Красим прогнозируемый период
+      if (date >= predictedStart && date <= predictedEnd) {
+        return 'period-predicted'
+      }
+
+      // --- ОВУЛЯЦИЯ И ФЕРТИЛЬНОСТЬ ДЛЯ ПРОГНОЗА ---
+      const ovulationDate = new Date(predictedStart)
       ovulationDate.setDate(ovulationDate.getDate() - 14)
-      const ovuStr = ovulationDate.toISOString().split('T')[0]
-
-      if (dateStr === ovuStr) return 'ovulation'
+      
+      if (date.toISOString().split('T')[0] === ovulationDate.toISOString().split('T')[0]) {
+        return 'ovulation'
+      }
 
       const fertStart = new Date(ovulationDate)
       fertStart.setDate(ovulationDate.getDate() - 3)
@@ -87,7 +92,7 @@ export default function CycleCalendar() {
   return (
     <div className="calendar-container">
       <Calendar
-        onChange={handleDateChange}
+        onChange={setValue}
         value={value}
         tileClassName={getTileClassName}
         locale="ru-RU"
@@ -106,7 +111,7 @@ export default function CycleCalendar() {
           <div className="w-2 h-2 rounded-full border border-[#4caf50] border-dashed"></div> Овуляция
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-[#6495ED]/30"></div> Фертильность
+          <div className="w-2 h-2 rounded-full bg-[#6495ED]/30"></div> Прогноз
         </div>
       </div>
     </div>
