@@ -123,7 +123,7 @@ export default function WelcomePage() {
                 <span className="text-sm font-bold">{cycleLength}</span>
                 <button onClick={() => { setCycleLength(prev => Math.min(45, prev + 1)); triggerHaptic('soft'); }} className="w-8 h-8 text-blue-400">+</button>
               </div>
-              <p className="text-[8px] text-gray-500 mt-2 text-center italic">Обычно 28 дней</p>
+              <p className="text-[8px] text-gray-500 mt-2 text-center italic">В среднем 28 дней</p>
             </div>
 
             {/* Блок: Длительность месячных */}
@@ -141,7 +141,7 @@ export default function WelcomePage() {
           <div className="flex gap-3">
             {/* Блок: Год рождения */}
             <div className="flex-[0.4] bg-[#1e293b]/50 p-4 rounded-[24px] border border-white/5 flex flex-col justify-center">
-               <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-2 text-center font-bold">Ваш год</p>
+               <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-2 text-center font-bold">Год рождения</p>
                <input 
                  type="number" 
                  min="1950" max="2015"
