@@ -130,3 +130,31 @@ button:focus {
   background: rgba(255, 77, 109, 0.5) !important; /* 50% прозрачности */
   border: 1px dashed #ff4d6d !important;
 }
+.calendar-container .tile-period { background-color: #ff4d6d !important; color: white !important; }
+.calendar-container .tile-ovulation { background-color: #7FFFD4 !important; color: #0e1a2b !important; font-weight: bold; }
+.calendar-container .tile-fertility { background-color: rgba(76, 175, 80, 0.3) !important; color: #81c784 !important; }
+.calendar-container .tile-predicted { background-color: rgba(255, 77, 109, 0.3) !important; border: 1px dashed #ff4d6d !important; }
+.calendar-container .tile-today { border: 1px solid white !important; }
+/* --- СТИЛИ ДЛЯ ОТОБРАЖЕНИЯ ПА (СЕКСА) --- */
+
+/* Плитка, на которой есть событие 'sex', должна быть relative */
+.calendar-container .tile-sex {
+  position: relative !important;
+}
+
+/* Создаем сердечко с помощью псевдоэлемента ::after */
+.calendar-container .tile-sex::after {
+  content: "❤️"; /* Иконка сердечка */
+  position: absolute;
+  top: 1px;       /* Чуть отступаем сверху */
+  right: 1px;     /* Чуть отступаем справа */
+  font-size: 8px; /* Маленький размер */
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.5)); /* Тень для читаемости */
+  z-index: 5;    /* Поверх текста даты */
+}
+
+/* Убедимся, что на розовом фоне (Месячные) сердечко тоже видно */
+.calendar-container .tile-period.tile-sex::after {
+  filter: drop-shadow(0 1px 1px rgba(255,255,255,0.3));
+}
